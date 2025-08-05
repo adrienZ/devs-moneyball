@@ -19,6 +19,12 @@ export default defineNuxtConfig({
     typeCheck: true,
   },
 
+  runtimeConfig: {
+    public: {
+      githubToken: process.env.GITHUB_TOKEN,
+    },
+  },
+
   nitro: {
     experimental: {
       tasks: true,
