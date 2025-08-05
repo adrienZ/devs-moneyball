@@ -1,10 +1,24 @@
 import { defineEventHandler } from 'h3';
 import { useRuntimeConfig } from '#imports';
 import { useStorage } from "nitropack/runtime"
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// import { readFileSync } from 'node:fs';
+// import { join } from 'node:path';
 
-const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
+// const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
+const popularUsersQuery = `
+query PopularUsers {
+  search(query: "location:Paris type:user sort:followers-desc", type: USER, first: 50) {
+    nodes {
+      ... on User {
+        login
+        name
+        followers {
+          totalCount
+        }
+      }
+    }
+  }
+}`;
 
 interface User {
   login: string;
