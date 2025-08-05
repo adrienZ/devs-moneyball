@@ -5,8 +5,7 @@ import TheFooter from './components/TheFooter.vue';
 
 <template>
   <div>
-    <NuxtRouteAnnouncer />
-    <NuxtWelcome />
+    <NuxtPage />
     <TheFooter />
   </div>
 </template>
