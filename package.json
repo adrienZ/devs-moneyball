@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "codegen": "graphql-codegen"
   },
   "dependencies": {
     "@nuxt/eslint": "1.7.1",
@@ -25,6 +26,10 @@
   "packageManager": "pnpm@10.14.0+sha256.297534e65d5842450539c1e8022c8831ab5e1fe2eb74664787a815519542d620",
   "devDependencies": {
     "unplugin-vue-router": "^0.15.0",
-    "vue-tsc": "^3.0.5"
+    "vue-tsc": "^3.0.5",
+    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/typescript": "^4.0.1",
+    "@graphql-codegen/typescript-operations": "^4.0.1",
+    "@graphql-codegen/typed-document-node": "^5.0.1"
   }
 }
