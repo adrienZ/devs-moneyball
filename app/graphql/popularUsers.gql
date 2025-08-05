@@ -1,5 +1,5 @@
-query PopularUsers {
-  search(query: "location:Paris type:user sort:followers-desc", type: USER, first: 50) {
+query PopularUsers($query: String!) {
+  search(query: $query, type: USER, first: 50) {
     nodes {
       ... on User {
         login
@@ -7,6 +7,7 @@ query PopularUsers {
         followers {
           totalCount
         }
+        createdAt
       }
     }
   }

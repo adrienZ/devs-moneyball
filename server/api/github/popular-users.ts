@@ -1,13 +1,13 @@
 // import { defineEventHandler } from 'h3';
 import { defineCachedEventHandler } from 'nitropack/runtime'
+import { getQuery } from 'h3'
 import { useRuntimeConfig } from '#imports'
-// import { readFileSync } from 'node:fs';
-// import { join } from 'node:path';
+import { z } from 'zod'
 
 // const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
 const popularUsersQuery = `
-query PopularUsers {
-  search(query: "location:Paris type:user sort:followers-desc", type: USER, first: 50) {
+query PopularUsers($query: String!) {
+  search(query: $query, type: USER, first: 50) {
     nodes {
       ... on User {
         login
@@ -15,6 +15,7 @@ query PopularUsers {
         followers {
           totalCount
         }
+        createdAt
       }
     }
   }
@@ -24,13 +25,51 @@ interface User {
   login: string
   name: string | null
   followers: { totalCount: number }
+  createdAt: string
 }
 
 interface PopularUsersQuery {
   search: { nodes: (User | null)[] }
 }
 
-export default defineCachedEventHandler(async () => {
+const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365
+
+const querySchema = z.object({
+  minFollowers: z.coerce.number().int().nonnegative().optional(),
+  maxFollowers: z.coerce.number().int().nonnegative().optional(),
+  minAge: z.coerce.number().nonnegative().optional(),
+  maxAge: z.coerce.number().nonnegative().optional(),
+  sortField: z.enum(['followers', 'age']).default('followers'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+})
+
+export default defineCachedEventHandler(async (event) => {
+  const params = querySchema.parse(getQuery(event))
+  const now = Date.now()
+
+  const parts = ['location:Paris', 'type:user']
+
+  if (params.minFollowers !== undefined) parts.push(`followers:>${params.minFollowers}`)
+  if (params.maxFollowers !== undefined) {
+    parts.push(`followers:<${params.maxFollowers}`)
+  }
+  if (params.minAge !== undefined) {
+    const date = new Date(now - params.minAge * MS_IN_YEAR).toISOString().split('T')[0]
+    parts.push(`created:<${date}`)
+  }
+  if (params.maxAge !== undefined) {
+    const date = new Date(now - params.maxAge * MS_IN_YEAR).toISOString().split('T')[0]
+    parts.push(`created:>${date}`)
+  }
+  if (params.sortField === 'followers') {
+    parts.push(`sort:followers-${params.sortOrder}`)
+  }
+  else {
+    parts.push(params.sortOrder === 'asc' ? 'sort:joined-desc' : 'sort:joined-asc')
+  }
+
+  const query = parts.join(' ')
+
   const config = useRuntimeConfig()
   const response = await fetch('https://api.github.com/graphql', {
     method: 'POST',
@@ -38,7 +77,7 @@ export default defineCachedEventHandler(async () => {
       'Authorization': `Bearer ${config.public.githubToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query: popularUsersQuery }),
+    body: JSON.stringify({ query: popularUsersQuery, variables: { query } }),
   })
 
   if (!response.ok) {
@@ -46,7 +85,8 @@ export default defineCachedEventHandler(async () => {
   }
 
   const { data } = (await response.json()) as { data: PopularUsersQuery }
-  return data
+  const users = data.search.nodes.filter((u): u is User => !!u)
+  return users
 }, {
   maxAge: 60 * 60, // Cache for 1 hour
 })
