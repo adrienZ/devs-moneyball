@@ -7,13 +7,16 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "codegen": "graphql-codegen"
   },
   "dependencies": {
     "@nuxt/eslint": "1.7.1",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "3.3.0",
     "eslint": "^9.32.0",
+    "graphql": "^16.9.0",
+    "graphql-request": "^7.1.0",
     "nuxt": "^4.0.1",
     "typescript": "^5.9.2",
     "vue": "^3.5.18",
@@ -21,6 +24,13 @@
   },
   "packageManager": "pnpm@10.14.0+sha256.297534e65d5842450539c1e8022c8831ab5e1fe2eb74664787a815519542d620",
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/typescript": "^5.0.2",
+    "@graphql-codegen/typescript-graphql-request": "^5.0.2",
+    "@graphql-codegen/typescript-operations": "^5.0.2",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.4",
     "unplugin-vue-router": "^0.15.0",
     "vue-tsc": "^3.0.5"
   }

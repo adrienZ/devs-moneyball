@@ -1,0 +1,16 @@
+query TopParisDevs {
+  search(query: "location:paris type:user", type: USER, first: 50) {
+    edges {
+      node {
+        ... on User {
+          login
+          name
+          avatarUrl
+          followers {
+            totalCount
+          }
+        }
+      }
+    }
+  }
+}
