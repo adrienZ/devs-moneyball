@@ -30,4 +30,5 @@ export default defineNuxtConfig({
       tasks: true,
     },
   },
+  css: [`~/assets/style/main.css`],
 })
