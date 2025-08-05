@@ -1,0 +1,16 @@
+query BigRepoCommits($username: String!, $since: DateTime!, $until: DateTime!) {
+  user(login: $username) {
+    contributionsCollection(from: $since, to: $until) {
+      commitContributionsByRepository {
+        repository {
+          nameWithOwner
+          stargazerCount
+          forkCount
+        }
+        contributions {
+          totalCount
+        }
+      }
+    }
+  }
+}

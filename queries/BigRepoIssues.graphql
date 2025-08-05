@@ -1,0 +1,14 @@
+query BigRepoIssues($username: String!, $since: DateTime!, $until: DateTime!) {
+  user(login: $username) {
+    issues(first: 100, orderBy: {field: UPDATED_AT, direction: DESC}, filterBy: {since: $since}) {
+      nodes {
+        repository {
+          nameWithOwner
+          stargazerCount
+          forkCount
+        }
+        createdAt
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+query BigRepoPullRequests($username: String!, $since: DateTime!, $until: DateTime!) {
+  user(login: $username) {
+    pullRequests(first: 100, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        repository {
+          nameWithOwner
+          stargazerCount
+          forkCount
+        }
+        merged
+        createdAt
+      }
+    }
+  }
+}
