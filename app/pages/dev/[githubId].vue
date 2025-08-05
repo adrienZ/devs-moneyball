@@ -2,6 +2,8 @@
 import { useFetch } from 'nuxt/app';
 import { useRoute } from 'vue-router';
 import { computed } from 'vue';
+import Chart from '~/components/Chart.vue';
+import { UTable } from '#components';
 
 interface UserMetrics {
   login: string;
@@ -10,6 +12,16 @@ interface UserMetrics {
   public_repos: number;
   public_gists: number;
   created_at: string;
+  totalStars: number;
+  totalForks: number;
+  avgStarsPerRepo: number;
+  topLanguages: string[];
+  devScore: number;
+  letter: string;
+  summary: string;
+  criteria: Record<string, number>;
+  pros: string[];
+  cons: string[];
 }
 
 const route = useRoute();
@@ -33,24 +45,124 @@ const accountAge = computed(() => {
   }
   return null;
 });
+
+const formattedCreatedAt = computed(() => {
+  if (user.value) {
+    return new Date(user.value.created_at).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+  return null;
+});
+
+const starsPerRepo = computed(() => {
+  if (user.value) {
+    return user.value.avgStarsPerRepo.toFixed(2);
+  }
+  return null;
+});
+
+const keyMetrics = computed(() => ({
+  "Total Stars": user.value?.totalStars,
+  "Total Forks": user.value?.totalForks,
+  "Average Stars per Repo": starsPerRepo.value,
+  "Followers per Repo": followersPerRepo.value,
+  "Account Age (years)": accountAge.value,
+  "Top Languages": user.value?.topLanguages.join(', ')
+}));
+
+const rows = computed(() => {  
+  return Object.entries(keyMetrics.value).map(([key, value]) => ({
+    metric: key,
+    value
+  }));
+});
 </script>
 
 <template>
-  <div>
-    <p v-if="loading">Loading...</p>
-    <p v-else-if="error">Error: {{ error.message }}</p>
-    <template v-else>
-      <h2>{{ user?.login }}</h2>
-      <ul>
-        <li>Followers: {{ user?.followers }}</li>
-        <li>Following: {{ user?.following }}</li>
-        <li>Public Repositories: {{ user?.public_repos }}</li>
-        <li>Public Gists: {{ user?.public_gists }}</li>
-        <li v-if="followersPerRepo !== null">Followers per Repo: {{ followersPerRepo }}</li>
-        <li v-if="accountAge !== null">Account Age (years): {{ accountAge }}</li>
-        <li>Account Created: {{ user?.created_at }}</li>
-      </ul>
-    </template>
-  </div>
-</template>
+  <UContainer>
+    <UAlert v-if="loading" color="primary" class="mb-6">Loading...</UAlert>
+    <UAlert v-else-if="error" color="error" class="mb-6">Error loading user data.</UAlert>
+    <!-- Header section: avatar and username -->
+    <div v-if="user" class="flex items-center space-x-4 mt-8">
+      <img :src="`https://github.com/${user.login}.png`" alt="avatar" class="w-16 h-16 rounded-full border">
+      <div>
+        <h1 class="text-2xl font-bold">{{ user.login }}</h1>
+        <p class="text-gray-500">GitHub Developer Profile</p>
+      </div>
+    </div>
+    <div v-if="user" class="grid lg:grid-cols-3 gap-6 py-6 max-w-7xl mx-auto">
+    <!-- LEFT PANEL -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Overall rating -->
+        <UCard>
+          <template #header>
+            <span class="text-sm">Overall Rating</span>
+          </template>
+          <div class="flex flex-col items-start">
+            <UBadge
+              :color="
+                  user?.devScore >= 85 ? 'success' :
+                  user?.devScore >= 70 ? 'warning' :
+                  user?.devScore >= 50 ? 'secondary' :
+                  'error'
+            " size="xl" class="text-5xl font-bold px-4 py-2 mb-2">
+              {{ user?.letter }}
+            </UBadge>
+            <span class="text-xl">{{ user?.devScore }} / 100</span>
+            <span class="mt-2 text-yellow-400 font-medium">{{ user?.summary }}</span>
+          </div>
+        </UCard>
 
+        <!-- Pros -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-bold mb-2">Pros</h3>
+          </template>
+          <ul class="space-y-2">
+            <li v-for="pro in user?.pros" :key="pro" class="flex items-center">
+              <UIcon name="i-heroicons-check-circle-solid" class="text-green-500 mr-2" />
+              <span class="text-green-700">{{ pro }}</span>
+            </li>
+          </ul>
+        </UCard>
+
+        <!-- Cons -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-bold mb-2">Cons</h3>
+          </template>
+          <ul class="space-y-2">
+            <li v-for="con in user?.cons" :key="con" class="flex items-center">
+              <UIcon name="i-heroicons-x-circle-solid" class="text-red-500 mr-2" />
+              <span class="text-red-700">{{ con }}</span>
+            </li>
+          </ul>
+        </UCard>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="lg:col-span-1 space-y-6">
+        <!-- Radar Chart -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-bold">Criteria Breakdown</h3>
+          </template>
+          <div class="max-w-md mx-auto h-96">
+            <Chart :criteria="user?.criteria" :dark="true" />
+          </div>
+        </UCard>
+
+        <!-- Key Metrics Table -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-bold">Key Metrics</h3>
+          </template>
+          <UTable :data="rows" />
+        </UCard>
+      </div>
+    </div>
+  </UContainer>
+</template>
