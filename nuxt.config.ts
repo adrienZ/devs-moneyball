@@ -1,34 +1,40 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
   modules: ['@nuxt/eslint', '@nuxt/ui', '@nuxt/image'],
+  components: {
+    // disable auto-import
+    dirs: [],
+  },
   imports: {
     // disable auto-import
     autoImport: false,
     scan: false,
   },
-  components: {
-    // disable auto-import
-    dirs: [],
-  },
-  experimental: {
-    typedPages: true,
-  },
-  typescript: {
-    typeCheck: true,
-  },
+  devtools: { enabled: true },
+  css: [`~/assets/style/main.css`],
 
   runtimeConfig: {
     public: {
       githubToken: process.env.GITHUB_TOKEN,
     },
   },
+  experimental: {
+    typedPages: true,
+  },
+  compatibilityDate: '2025-07-15',
 
   nitro: {
     experimental: {
       tasks: true,
     },
   },
-  css: [`~/assets/style/main.css`],
+  typescript: {
+    typeCheck: true,
+  },
+
+  eslint: {
+    config: {
+      stylistic: true,
+    },
+  },
 })
