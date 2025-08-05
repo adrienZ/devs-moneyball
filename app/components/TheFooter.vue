@@ -17,7 +17,6 @@
 <script lang="ts" setup>
 import { DevOnly } from "#components";
 
-
 function triggerDevTools() {
   import("#imports").then(({ useNuxtDevTools }) => {
     const devtoolsClient = useNuxtDevTools();

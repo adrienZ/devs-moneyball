@@ -1,36 +1,17 @@
 <script setup lang="ts">
-import { gql } from '@apollo/client/core';
-import { useQuery } from '@vue/apollo-composable';
+import { useFetch } from 'nuxt/app';
 
-interface Repo {
-  name: string;
-  stargazerCount: number;
+interface User {
+  login: string;
+  followers: { totalCount: number };
+  name: string | null;
 }
 
-interface ViewerData {
-  viewer: {
-    login: string;
-    name: string;
-    repositories: {
-      nodes: Repo[];
-    };
-  };
+interface PopularUsersQuery {
+  search: { nodes: (User | null)[] };
 }
 
-const { result, loading, error } = useQuery<ViewerData>(gql`
-  query Viewer {
-    viewer {
-      login
-      name
-      repositories(orderBy: { field: STARGAZERS, direction: DESC }, first: 5) {
-        nodes {
-          name
-          stargazerCount
-        }
-      }
-    }
-  }
-`);
+const { data: result, pending: loading, error } = await useFetch<PopularUsersQuery>('/api/github/popular-users');
 </script>
 
 <template>
@@ -38,11 +19,10 @@ const { result, loading, error } = useQuery<ViewerData>(gql`
     <p v-if="loading">Loading...</p>
     <p v-else-if="error">Error: {{ error.message }}</p>
     <template v-else>
-      <p>Logged in as {{ result?.viewer.login }} ({{ result?.viewer.name }})</p>
-      <h2>Top Repositories</h2>
+      <h2>Top 50 Users in Paris</h2>
       <ul>
-        <li v-for="repo in result?.viewer.repositories.nodes" :key="repo.name">
-          {{ repo.name }} (★ {{ repo.stargazerCount }})
+        <li v-for="user in result?.search.nodes || []" :key="user?.login">
+          {{ user?.login }} ({{ user?.followers.totalCount }} followers)
         </li>
       </ul>
     </template>

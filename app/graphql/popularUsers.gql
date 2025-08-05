@@ -1,0 +1,13 @@
+query PopularUsers {
+  search(query: "location:Paris type:user sort:followers-desc", type: USER, first: 50) {
+    nodes {
+      ... on User {
+        login
+        name
+        followers {
+          totalCount
+        }
+      }
+    }
+  }
+}
