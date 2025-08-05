@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3';
-import { useRuntimeConfig } from '#imports';
+import { useRuntimeConfig, useStorage } from '#imports';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -15,12 +15,14 @@ interface PopularUsersQuery {
   search: { nodes: (User | null)[] };
 }
 
-let cached: PopularUsersQuery | null = null;
-let cachedAt = 0;
+const storageKey = 'github:popularUsers';
 const maxAge = 60 * 60 * 1000; // 1 hour
 
 export default defineEventHandler(async () => {
-  if (!cached || Date.now() - cachedAt > maxAge) {
+  const storage = useStorage();
+  const cached = await storage.getItem<{ data: PopularUsersQuery; cachedAt: number }>(storageKey);
+
+  if (!cached || Date.now() - cached.cachedAt > maxAge) {
     const config = useRuntimeConfig();
     const response = await fetch('https://api.github.com/graphql', {
       method: 'POST',
@@ -36,9 +38,9 @@ export default defineEventHandler(async () => {
     }
 
     const { data } = (await response.json()) as { data: PopularUsersQuery };
-    cached = data;
-    cachedAt = Date.now();
+    await storage.setItem(storageKey, { data, cachedAt: Date.now() });
+    return data;
   }
 
-  return cached;
+  return cached.data;
 });
