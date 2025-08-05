@@ -17,11 +17,10 @@
 <script lang="ts" setup>
 import { DevOnly } from "#components";
 
-
 function triggerDevTools() {
-  import("#imports").then((m) => {
-    const devtoolsClient = (m as any).useNuxtDevTools?.();
-    devtoolsClient?.value?.devtools.open();
+  import("#imports").then(({ useNuxtDevTools }) => {
+    const devtoolsClient = useNuxtDevTools();
+    devtoolsClient.value?.devtools.open();
   });
 }
 </script>
