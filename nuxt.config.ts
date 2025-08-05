@@ -30,4 +30,10 @@ export default defineNuxtConfig({
       tasks: true,
     },
   },
+
+  vite: {
+    optimizeDeps: {
+      exclude: ['@graphql-typed-document-node/core'],
+    },
+  }
 })
