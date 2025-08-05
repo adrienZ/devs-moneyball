@@ -12,8 +12,8 @@ const { result, loading, error } = useQuery(PopularUsersDocument);
     <template v-else>
       <h2>Top 50 Users in Paris</h2>
       <ul>
-        <li v-for="user in result?.search.nodes" :key="user.login">
-          {{ user.login }} ({{ user.followers.totalCount }} followers)
+        <li v-for="user in result?.search.nodes" :key="user?.__typename">
+          <div v-if="user?.__typename === 'User'">{{ user.login }} ({{ user.followers.totalCount }} followers)</div>
         </li>
       </ul>
     </template>
