@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useFetch } from 'nuxt/app';
+import { NuxtLink } from '#components';
 
 interface User {
   login: string;
@@ -22,7 +23,8 @@ const { data: result, pending: loading, error } = await useFetch<PopularUsersQue
       <h2>Top 50 Users in Paris</h2>
       <ul>
         <li v-for="user in result?.search.nodes || []" :key="user?.login">
-          {{ user?.login }} ({{ user?.followers.totalCount }} followers)
+          <NuxtLink :to="`/dev/${user?.login}`">{{ user?.login }}</NuxtLink>
+          ({{ user?.followers.totalCount }} followers)
         </li>
       </ul>
     </template>
