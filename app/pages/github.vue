@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { useQuery } from '@vue/apollo-composable';
-import { PopularUsersDocument } from '~/graphql/generated';
+import { useFetch } from 'nuxt/app';
 
-const { result, loading, error } = useQuery(PopularUsersDocument);
+interface User {
+  login: string;
+  followers: { totalCount: number };
+  name: string | null;
+}
+
+interface PopularUsersQuery {
+  search: { nodes: (User | null)[] };
+}
+
+const { data: result, pending: loading, error } = await useFetch<PopularUsersQuery>('/api/github/popular-users');
 </script>
 
 <template>
@@ -12,8 +21,8 @@ const { result, loading, error } = useQuery(PopularUsersDocument);
     <template v-else>
       <h2>Top 50 Users in Paris</h2>
       <ul>
-        <li v-for="user in result?.search.nodes" :key="user.login">
-          {{ user.login }} ({{ user.followers.totalCount }} followers)
+        <li v-for="user in result?.search.nodes || []" :key="user?.login">
+          {{ user?.login }} ({{ user?.followers.totalCount }} followers)
         </li>
       </ul>
     </template>
