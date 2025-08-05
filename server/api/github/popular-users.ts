@@ -1,5 +1,6 @@
 import { defineEventHandler } from 'h3';
-import { useRuntimeConfig, useStorage } from '#imports';
+import { useRuntimeConfig } from '#imports';
+import { useStorage } from "nitropack/runtime"
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -15,14 +16,17 @@ interface PopularUsersQuery {
   search: { nodes: (User | null)[] };
 }
 
-const storageKey = 'github:popularUsers';
+const storageKey = 'data:github:popular';
 const maxAge = 60 * 60 * 1000; // 1 hour
+const cacheVersion = '0.1'; // Version of the cache structure
 
 export default defineEventHandler(async () => {
-  const storage = useStorage();
-  const cached = await storage.getItem<{ data: PopularUsersQuery; cachedAt: number }>(storageKey);
-
+  const storage = useStorage(storageKey);
+  const cached = await storage.getItem<{ data: PopularUsersQuery; cachedAt: number }>(cacheVersion);
+  
   if (!cached || Date.now() - cached.cachedAt > maxAge) {
+      console.log(`FETCH`);
+
     const config = useRuntimeConfig();
     const response = await fetch('https://api.github.com/graphql', {
       method: 'POST',
@@ -38,9 +42,11 @@ export default defineEventHandler(async () => {
     }
 
     const { data } = (await response.json()) as { data: PopularUsersQuery };
-    await storage.setItem(storageKey, { data, cachedAt: Date.now() });
+    await storage.setItem(cacheVersion, { data, cachedAt: Date.now() });
     return data;
   }
+
+  
 
   return cached.data;
 });
