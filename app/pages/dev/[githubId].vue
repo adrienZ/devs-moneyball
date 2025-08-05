@@ -200,7 +200,7 @@ const rows = computed(() => {
               Criteria Breakdown
             </h3>
           </template>
-          <div class="max-w-md mx-auto h-96">
+          <div class="max-w-md mx-auto">
             <TheChart
               :criteria="user?.criteria"
               :dark="true"

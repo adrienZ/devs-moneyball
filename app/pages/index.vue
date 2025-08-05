@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useFetch } from 'nuxt/app'
-import { ref, computed } from 'vue'
-import { NuxtLink, UFormField, UInputNumber, USlider, USelect, UProgress, UAlert } from '#components'
+import { ref, computed, h, resolveComponent } from 'vue'
+import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert } from '#components'
+
+import type { TableColumn } from '@nuxt/ui'
 
 interface User {
   login: string
@@ -42,46 +44,135 @@ const { data: users, pending: loading, error } = await useFetch<User[]>('/api/gi
 })
 
 const safeUsers = computed(() => users.value || [])
+
+const UButton = resolveComponent('UButton')
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+function getHeader(column: Parameters<TableColumn<User>['header']>['0']['column'], label: string) {
+  const isSorted = column.getIsSorted()
+  return h(UButton, {
+    'color': 'neutral',
+    'variant': 'ghost',
+    label,
+    'icon': isSorted
+      ? isSorted === 'asc'
+        ? 'i-lucide-arrow-up-narrow-wide'
+        : 'i-lucide-arrow-down-wide-narrow'
+      : 'i-lucide-arrow-up-down',
+    'class': '-mx-2.5',
+    'aria-label': `Sort by ${label}`,
+    'onClick': () => column.toggleSorting(isSorted === 'asc'),
+  })
+}
+
+const columns: TableColumn<User>[] = [
+  {
+    accessorKey: 'login',
+    header: ({ column }) => getHeader(column, 'User'),
+    cell: ({ row }) =>
+      h(
+        'a',
+        { href: `/dev/${row.original.login}`, class: 'text-primary underline' },
+        row.original.login,
+      ),
+    enableSorting: true,
+  },
+  {
+    accessorKey: 'followers.totalCount',
+    header: ({ column }) => getHeader(column, 'Followers'),
+    cell: ({ row }) => row.original.followers.totalCount,
+    enableSorting: true,
+  },
+  {
+    accessorKey: 'createdAt',
+    header: ({ column }) => getHeader(column, 'Account Age'),
+    cell: ({ row }) => `${Math.floor(getAge(row.original.createdAt))} years`,
+    enableSorting: true,
+  },
+]
+
+const sorting = ref([])
 </script>
 
 <template>
   <div>
-    <UProgress v-if="loading" class="mb-4" />
+    <UProgress
+      v-if="loading"
+      class="mb-4"
+    />
     <UAlert
       v-if="error"
-      color="red"
+      color="error"
       :title="`Error: ${error.message}`"
       class="mb-4"
     />
     <h2>Top 50 Users in Paris</h2>
-    <div class="filters">
-      <UFormField :label="`Min Followers: ${minFollowers ?? 0}`">
-        <USlider v-model="minFollowers" :min="0" :max="100000" />
+    <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
+      <UFormField
+        :label="`Min Followers: ${minFollowers ?? 0}`"
+        class="col-span-2 md:col-span-1"
+      >
+        <USlider
+          v-model="minFollowers"
+          :min="0"
+          :max="100000"
+          class="w-full"
+        />
       </UFormField>
-      <UFormField label="Max Followers">
-        <UInputNumber v-model="maxFollowers" />
+      <UFormField
+        label="Max Followers"
+        class="col-span-2 md:col-span-1"
+      >
+        <UInputNumber
+          v-model="maxFollowers"
+          class="w-full"
+        />
       </UFormField>
-      <UFormField label="Min Age (years)">
-        <UInputNumber v-model="minAge" />
+      <UFormField
+        label="Min Age (years)"
+        class="col-span-1"
+      >
+        <UInputNumber
+          v-model="minAge"
+          class="w-full"
+        />
       </UFormField>
-      <UFormField label="Max Age (years)">
-        <UInputNumber v-model="maxAge" />
+      <UFormField
+        label="Max Age (years)"
+        class="col-span-1"
+      >
+        <UInputNumber
+          v-model="maxAge"
+          class="w-full"
+        />
       </UFormField>
-      <UFormField label="Sort By">
-        <USelect v-model="sortField" :options="sortFieldOptions" />
+      <UFormField
+        label="Sort By"
+        class="col-span-1"
+      >
+        <USelect
+          v-model="sortField"
+          :options="sortFieldOptions"
+          class="w-full"
+        />
       </UFormField>
-      <UFormField label="Order">
-        <USelect v-model="sortOrder" :options="sortOrderOptions" />
+      <UFormField
+        label="Order"
+        class="col-span-1"
+      >
+        <USelect
+          v-model="sortOrder"
+          :options="sortOrderOptions"
+          class="w-full"
+        />
       </UFormField>
     </div>
-    <ul>
-      <li
-        v-for="user in safeUsers"
-        :key="user.login"
-      >
-        <NuxtLink :to="`/dev/${user.login}`">{{ user.login }}</NuxtLink>
-        ({{ user.followers.totalCount }} followers, {{ Math.floor(getAge(user.createdAt)) }} years)
-      </li>
-    </ul>
+    <UTable
+      v-model:sorting="sorting"
+      :data="safeUsers"
+      :columns="columns"
+      class="mt-6"
+    />
   </div>
 </template>

@@ -14,3 +14,6 @@ import { myFunction } from "#imports"
 If you can use explicit dependecies (for example vue > #imports)
 
 Always try to reduce diffs unless absolutely needed.
+
+
+DO NOT USE THE ANY TYPE IN TYPESCRIPT
