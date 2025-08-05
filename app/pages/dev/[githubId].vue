@@ -136,8 +136,8 @@ const rows = computed(() => {
                     : user?.devScore >= 50 ? 'secondary'
                       : 'error'
                 "
-                size="xl"
-                class="text-5xl font-bold px-4 py-2 mb-2"
+                size="md"
+                class="text-2xl font-bold px-4 py-2 mb-2"
               >
                 {{ user?.letter }}
               </UBadge>
