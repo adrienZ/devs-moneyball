@@ -3,6 +3,7 @@ import { defineCachedEventHandler } from 'nitropack/runtime'
 import { getQuery } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { z } from 'zod'
+import { getUserCountry } from '../../utils/get-user-country'
 
 // const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
 const popularUsersQuery = `
@@ -47,7 +48,12 @@ export default defineCachedEventHandler(async (event) => {
   const params = querySchema.parse(getQuery(event))
   const now = Date.now()
 
-  const parts = ['location:Paris', 'type:user']
+  const parts = ['type:user']
+
+  const country = await getUserCountry(event)
+  if (country) {
+    parts.push(`location:${JSON.stringify(country)}`)
+  }
 
   if (params.minFollowers !== undefined) parts.push(`followers:>${params.minFollowers}`)
   if (params.maxFollowers !== undefined) {
