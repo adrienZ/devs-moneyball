@@ -110,6 +110,7 @@ export default defineCachedEventHandler(async (event) => {
     public_repos: data.public_repos,
     public_gists: data.public_gists,
     created_at: data.created_at,
+    bio: data.bio,
     totalStars,
     totalForks,
     avgStarsPerRepo,

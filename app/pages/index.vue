@@ -73,8 +73,15 @@ const columns: TableColumn<User>[] = [
     cell: ({ row }) =>
       h(
         'a',
-        { href: `/dev/${row.original.login}`, class: 'text-primary underline' },
-        row.original.login,
+        { href: `/dev/${row.original.login}`, class: 'flex items-center gap-1 text-primary underline' },
+        [
+          h(resolveComponent('UAvatar'), {
+            src: `https://github.com/${row.original.login}.png`,
+            alt: row.original.login,
+            size: 'sm',
+          }),
+          row.original.login,
+        ],
       ),
     enableSorting: true,
   },
