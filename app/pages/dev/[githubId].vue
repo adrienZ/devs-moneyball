@@ -19,6 +19,7 @@ interface UserMetrics {
   devScore: number
   letter: string
   summary: string
+  bio?: string | null
   criteria: Record<string, number>
   pros: string[]
   cons: string[]
@@ -83,6 +84,18 @@ const rows = computed(() => {
 
 <template>
   <UContainer>
+    <div class="mt-6 mb-2">
+      <NuxtLink
+        to="/"
+        class="inline-flex items-center gap-2 text-primary font-medium hover:underline transition-colors text-base px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20"
+      >
+        <UIcon
+          name="i-heroicons-arrow-left"
+          class="w-4 h-4"
+        />
+        Back to Home
+      </NuxtLink>
+    </div>
     <UAlert
       v-if="loading"
       color="primary"
@@ -108,11 +121,24 @@ const rows = computed(() => {
         class="w-16 h-16 rounded-full border"
       >
       <div>
-        <h1 class="text-2xl font-bold">
+        <h1 class="text-2xl font-bold flex items-center gap-2">
           {{ user.login }}
+          <a
+            :href="`https://github.com/${user.login}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary underline text-base font-normal"
+            aria-label="View GitHub profile"
+          >
+            <UIcon
+              name="i-simple-icons-github"
+              class="inline-block align-middle"
+            />
+            <span class="sr-only">GitHub</span>
+          </a>
         </h1>
         <p class="text-gray-500">
-          GitHub Developer Profile
+          {{ user?.bio || 'No description provided.' }}
         </p>
       </div>
     </div>
@@ -200,7 +226,7 @@ const rows = computed(() => {
               Criteria Breakdown
             </h3>
           </template>
-          <div class="max-w-md mx-auto h-96">
+          <div class="max-w-md mx-auto">
             <TheChart
               :criteria="user?.criteria"
               :dark="true"
