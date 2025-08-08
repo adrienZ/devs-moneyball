@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxt/ui', '@nuxt/image'],
+  modules: ["@nuxt/eslint", "@nuxt/ui", "@nuxt/image"],
   components: {
     // disable auto-import
     dirs: [],
@@ -22,7 +22,7 @@ export default defineNuxtConfig({
   experimental: {
     typedPages: true,
   },
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: "2025-07-15",
 
   nitro: {
     experimental: {
@@ -35,7 +35,10 @@ export default defineNuxtConfig({
 
   eslint: {
     config: {
-      stylistic: true,
+      stylistic: {
+        semi: true,
+        quotes: "double",
+      },
     },
   },
-})
+});

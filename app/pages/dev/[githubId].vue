@@ -1,51 +1,51 @@
 <script setup lang="ts">
-import { useFetch } from 'nuxt/app'
-import { useRoute } from 'vue-router'
-import { computed } from 'vue'
-import TheChart from '~/components/TheChart.vue'
-import { UTable, UTooltip } from '#components'
+import { useFetch } from "nuxt/app";
+import { useRoute } from "vue-router";
+import { computed } from "vue";
+import TheChart from "~/components/TheChart.vue";
+import { UTable, UTooltip } from "#components";
 
 interface UserMetrics {
-  login: string
-  followers: number
-  following: number
-  public_repos: number
-  public_gists: number
-  created_at: string
-  totalStars: number
-  totalForks: number
-  avgStarsPerRepo: number
-  topLanguages: string[]
-  devScore: number
-  letter: string
-  summary: string
-  bio?: string | null
-  criteria: Record<string, number>
-  pros: string[]
-  cons: string[]
+  login: string;
+  followers: number;
+  following: number;
+  public_repos: number;
+  public_gists: number;
+  created_at: string;
+  totalStars: number;
+  totalForks: number;
+  avgStarsPerRepo: number;
+  topLanguages: string[];
+  devScore: number;
+  letter: string;
+  summary: string;
+  bio?: string | null;
+  criteria: Record<string, number>;
+  pros: string[];
+  cons: string[];
 }
 
-const route = useRoute()
-const githubId = (route.params as { githubId: string }).githubId
+const route = useRoute();
+const githubId = (route.params as { githubId: string }).githubId;
 
 const { data: user, pending: loading, error } = await useFetch<UserMetrics>(
   `/api/github/users/${githubId}`,
-)
+);
 
 const followersPerRepo = computed(() => {
   if (user.value && user.value.public_repos > 0) {
-    return (user.value.followers / user.value.public_repos).toFixed(2)
+    return (user.value.followers / user.value.public_repos).toFixed(2);
   }
-  return null
-})
+  return null;
+});
 
 const accountAge = computed(() => {
   if (user.value) {
-    const diff = Date.now() - new Date(user.value.created_at).getTime()
-    return (diff / (1000 * 60 * 60 * 24 * 365)).toFixed(1)
+    const diff = Date.now() - new Date(user.value.created_at).getTime();
+    return (diff / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
   }
-  return null
-})
+  return null;
+});
 
 // const formattedCreatedAt = computed(() => {
 //   if (user.value) {
@@ -60,26 +60,26 @@ const accountAge = computed(() => {
 
 const starsPerRepo = computed(() => {
   if (user.value) {
-    return user.value.avgStarsPerRepo.toFixed(2)
+    return user.value.avgStarsPerRepo.toFixed(2);
   }
-  return null
-})
+  return null;
+});
 
 const keyMetrics = computed(() => ({
-  'Total Stars': user.value?.totalStars,
-  'Total Forks': user.value?.totalForks,
-  'Average Stars per Repo': starsPerRepo.value,
-  'Followers per Repo': followersPerRepo.value,
-  'Account Age (years)': accountAge.value,
-  'Top Languages': user.value?.topLanguages.join(', '),
-}))
+  "Total Stars": user.value?.totalStars,
+  "Total Forks": user.value?.totalForks,
+  "Average Stars per Repo": starsPerRepo.value,
+  "Followers per Repo": followersPerRepo.value,
+  "Account Age (years)": accountAge.value,
+  "Top Languages": user.value?.topLanguages.join(", "),
+}));
 
 const rows = computed(() => {
   return Object.entries(keyMetrics.value).map(([key, value]) => ({
     metric: key,
     value,
-  }))
-})
+  }));
+});
 </script>
 
 <template>
