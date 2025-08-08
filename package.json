@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host 0.0.0.0",
     "lint": "eslint .",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -20,6 +20,8 @@
     "chart.js": "^4.5.0",
     "eslint": "^9.32.0",
     "graphql": "^16.8.0",
+    "i18n-iso-countries": "^7.14.0",
+    "node-ipinfo": "^4.1.0",
     "nuxt": "^4.0.1",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2",

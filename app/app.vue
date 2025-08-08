@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UApp, UContainer } from '#components'
+import { UApp, UContainer } from "#components";
 // import TheFooter from './components/TheFooter.vue';
 </script>
 
