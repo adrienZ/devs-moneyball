@@ -33,7 +33,7 @@ const sortOrderOptions = [
 
 const headers = useRequestHeaders();
 
-const { data: users, pending: loading, error } = await useAsyncData<User[]>("heyhey", () => $fetch("/api/github/popular-users", {
+const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
     minFollowers: minFollowers.value,
     maxFollowers: maxFollowers.value,
@@ -48,7 +48,7 @@ const { data: users, pending: loading, error } = await useAsyncData<User[]>("hey
 },
 );
 
-const safeUsers = computed(() => users.value.users || []);
+const safeUsers = computed(() => users.value?.users || []);
 
 const UButton = resolveComponent("UButton");
 
@@ -119,7 +119,9 @@ const sorting = ref([]);
       :title="`Error: ${error.message}`"
       class="mb-4"
     />
-    <h2 class="text-3xl font-bold py-8">Top 50 Users in {{ users.location.region }}</h2>
+    <h2 class="text-3xl font-bold py-8">
+      Top 50 Users in {{ users?.location?.region ?? "the World" }}
+    </h2>
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
       <UFormField
         :label="`Min Followers: ${minFollowers ?? 0}`"
