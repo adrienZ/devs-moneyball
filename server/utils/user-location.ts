@@ -12,8 +12,8 @@ export async function getUserIp(event: H3Event) {
   }
 
   try {
-    const remoteIP = await ofetch<string>("https://api.ipify.org");
-    return remoteIP;
+    const remoteIP = await ofetch<{ ip: string }>("https://ifconfig.co/json");
+    return remoteIP.ip;
   }
   catch (error) {
     console.error("Error fetching public IP:", error);
@@ -21,15 +21,16 @@ export async function getUserIp(event: H3Event) {
   }
 }
 
-export async function getUserLocation(event: H3Event): Promise<IPinfo | undefined> {
+export async function getUserLocation(event: H3Event): Promise<IPinfo | null> {
+  const config = useRuntimeConfig();
+
   const ip = await getUserIp(event);
 
   if (!ip) {
-    return undefined;
+    return null;
   }
 
   try {
-    const config = useRuntimeConfig();
     const ipinfoWrapper = new IPinfoWrapper(config.ipinfoToken);
     return await ipinfoWrapper.lookupIp(ip);
   }
@@ -37,10 +38,10 @@ export async function getUserLocation(event: H3Event): Promise<IPinfo | undefine
   catch (error) {
     if (error instanceof ApiLimitError) {
       console.warn("IPinfo API limit reached, returning undefined for country.");
-      return undefined;
+      return null;
     }
     console.error("Error fetching user country:", error);
-    return undefined;
+    return null;
   }
 }
 

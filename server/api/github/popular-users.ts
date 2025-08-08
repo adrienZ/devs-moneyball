@@ -3,7 +3,6 @@ import { defineCachedEventHandler } from "nitropack/runtime";
 import { getQuery } from "h3";
 import { useRuntimeConfig } from "#imports";
 import { z } from "zod";
-import { getUserLocation } from "~~/server/utils/user-location";
 
 // const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
 const popularUsersQuery = `
@@ -40,6 +39,7 @@ const querySchema = z.object({
   maxFollowers: z.coerce.number().int().nonnegative().optional(),
   minAge: z.coerce.number().nonnegative().optional(),
   maxAge: z.coerce.number().nonnegative().optional(),
+  location: z.string().optional(),
   sortField: z.enum(["followers", "age"]).default("followers"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
@@ -49,10 +49,8 @@ export default defineCachedEventHandler(async (event) => {
   const now = Date.now();
 
   const parts = ["type:user"];
-
-  const location = await getUserLocation(event);
-  if (location) {
-    parts.push(`location:${location.region}`);
+  if (params.location) {
+    parts.push(`location:${params.location}`);
   }
 
   if (params.minFollowers !== undefined) parts.push(`followers:>${params.minFollowers}`);
@@ -92,10 +90,7 @@ export default defineCachedEventHandler(async (event) => {
 
   const { data } = (await response.json()) as { data: PopularUsersQuery };
   const users = data.search.nodes.filter((u): u is User => !!u);
-  return {
-    users,
-    location,
-  };
+  return users;
 }, {
-  maxAge: 1, // Cache for 1 hour
+  maxAge: 60 * 60, // Cache for 1 hour
 });

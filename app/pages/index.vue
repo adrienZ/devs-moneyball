@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useAsyncData, useRequestHeaders } from "nuxt/app";
+import { useAsyncData, useRequestEvent } from "nuxt/app";
 import { ref, computed, h, resolveComponent } from "vue";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert } from "#components";
 
 import type { TableColumn } from "@nuxt/ui";
+import { getUserLocation } from "~~/server/utils/user-location";
 
 interface User {
   login: string;
@@ -31,7 +32,8 @@ const sortOrderOptions = [
   { label: "Descending", value: "desc" },
 ];
 
-const headers = useRequestHeaders();
+const serverEvent = useRequestEvent();
+const { data: location } = await useAsyncData("user-location", () => getUserLocation(serverEvent!));
 
 const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
@@ -41,14 +43,14 @@ const { data: users, pending: loading, error } = await useAsyncData("list", () =
     maxAge: maxAge.value,
     sortField: sortField.value,
     sortOrder: sortOrder.value,
+    location: location.value?.region,
   },
-  headers,
 }), {
   watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder],
 },
 );
 
-const safeUsers = computed(() => users.value?.users || []);
+const safeUsers = computed(() => users.value || []);
 
 const UButton = resolveComponent("UButton");
 
@@ -120,7 +122,7 @@ const sorting = ref([]);
       class="mb-4"
     />
     <h2 class="text-3xl font-bold py-8">
-      Top 50 Users in {{ users?.location?.region ?? "the World" }}
+      Top 50 Users in {{ location?.region ?? "the World" }}
     </h2>
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
       <UFormField
