@@ -14,7 +14,6 @@ export default defineNuxtConfig({
   css: [`~/assets/style/main.css`],
 
   runtimeConfig: {
-    ipinfoToken: process.env.IPINFO_TOKEN,
     public: {
       githubToken: process.env.GITHUB_TOKEN,
     },
