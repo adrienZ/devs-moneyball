@@ -21,7 +21,7 @@ function useLocationSearch() {
   const params = useUrlSearchParams("history");
   const locationInput = ref<LocationSuggestion>();
   const locationOptions = ref<LocationSuggestion[]>([]);
-  const searchTerm = ref<string>("");
+  const searchTerm = ref("");
   const route = useRoute();
 
   const query = useAsyncData("location-query", () => {
