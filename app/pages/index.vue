@@ -7,6 +7,7 @@ import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
+import CriteriaPicker from "~/components/CriteriaPicker.vue";
 
 const {
   locationInput,
@@ -207,6 +208,9 @@ const sorting = ref([]);
     <h2 class="text-3xl font-bold py-8">
       Top 50 Users in {{ queryLocation || "the World" }}
     </h2>
+
+    <CriteriaPicker />
+
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
       <UFormField
         label="Location"
