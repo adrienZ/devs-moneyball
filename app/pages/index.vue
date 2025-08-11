@@ -1,10 +1,94 @@
 <script setup lang="ts">
+import type { TableColumn } from "@nuxt/ui";
+import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
 import { ref, computed, h, resolveComponent } from "vue";
-import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert } from "#components";
+import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
+import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
+import type { LocationSuggestion } from "~~/server/services/locationService";
+import { useRoute } from "vue-router";
 
-import type { TableColumn } from "@nuxt/ui";
-import { getUserLocation } from "~~/server/utils/user-location";
+const {
+  locationInput,
+  locationOptions, debouncedKeystoreCallback,
+  query,
+  handleLocationValueChange,
+  searchTerm,
+} = useLocationSearch();
+
+// "inlined composable" https://www.youtube.com/watch?v=iKaDFAxzJyw&t=825s
+function useLocationSearch() {
+  const params = useUrlSearchParams("history");
+  const locationInput = ref<LocationSuggestion>();
+  const locationOptions = ref<LocationSuggestion[]>([]);
+  const searchTerm = ref("");
+  const route = useRoute();
+
+  const query = useAsyncData("location-query", () => {
+    return $fetch("/api/github/location-search", {
+      query: { q: searchTerm.value },
+    });
+  }, {
+    lazy: true,
+    immediate: false,
+  });
+
+  async function handleLocationKeystroke(queryString: string) {
+    searchTerm.value = queryString;
+
+    if (queryString.length < 2) {
+      locationOptions.value = [];
+      return;
+    }
+
+    await query.execute();
+
+    if (query.error.value) {
+      console.error("Error fetching location suggestions:", query.error.value);
+      locationOptions.value = [];
+      return;
+    }
+
+    locationOptions.value = (query.data.value ?? []);
+  }
+
+  const debouncedKeystoreCallback = useDebounceFn(handleLocationKeystroke, 1000);
+
+  function handleLocationValueChange() {
+    if (locationInput.value) {
+      params.location = locationInput.value.name;
+    }
+  }
+
+  function init() {
+    const initialValue = import.meta.server ? route.query.location?.toString() : params.location?.toString();
+    if (initialValue) {
+      const fakeLocationPrefill = {
+        name: initialValue,
+        label: initialValue,
+        country: "",
+        city: "",
+        state: "",
+        lat: NaN,
+        lon: NaN,
+      };
+
+      locationOptions.value = [fakeLocationPrefill];
+      locationInput.value = fakeLocationPrefill;
+    }
+  }
+
+  init();
+
+  return {
+    locationInput,
+    locationOptions,
+    query,
+    debouncedKeystoreCallback,
+    handleLocationValueChange,
+    searchTerm,
+  };
+}
 
 interface User {
   login: string;
@@ -33,7 +117,8 @@ const sortOrderOptions = [
 ];
 
 const serverEvent = useRequestEvent();
-const { data: location } = await useAsyncData("user-location", () => getUserLocation(serverEvent!));
+const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
+const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.region_name);
 
 const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
@@ -43,14 +128,12 @@ const { data: users, pending: loading, error } = await useAsyncData("list", () =
     maxAge: maxAge.value,
     sortField: sortField.value,
     sortOrder: sortOrder.value,
-    location: location.value?.region,
+    location: queryLocation.value,
   },
 }), {
-  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder],
+  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation],
 },
 );
-
-const safeUsers = computed(() => users.value || []);
 
 const UButton = resolveComponent("UButton");
 
@@ -122,9 +205,24 @@ const sorting = ref([]);
       class="mb-4"
     />
     <h2 class="text-3xl font-bold py-8">
-      Top 50 Users in {{ location?.region ?? "the World" }}
+      Top 50 Users in {{ queryLocation || "the World" }}
     </h2>
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
+      <UFormField
+        label="Location"
+        class="col-span-2 md:col-span-1"
+      >
+        <UInputMenu
+          v-model="locationInput"
+          :searchTerm="searchTerm"
+          :items="locationOptions"
+          :loading="query.status.value === 'pending'"
+          placeholder="Type a city, state, or country..."
+          clearable
+          @update:searchTerm="debouncedKeystoreCallback"
+          @update:modelValue="handleLocationValueChange"
+        />
+      </UFormField>
       <UFormField
         :label="`Min Followers: ${minFollowers ?? 0}`"
         class="col-span-2 md:col-span-1"
@@ -186,7 +284,7 @@ const sorting = ref([]);
     </div>
     <UTable
       v-model:sorting="sorting"
-      :data="safeUsers"
+      :data="users"
       :columns="columns"
       class="mt-6"
     />

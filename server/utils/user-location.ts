@@ -1,47 +1,49 @@
 import type { H3Event } from "h3";
 import { getRequestIP } from "h3";
 import { ofetch } from "ofetch";
-import { IPinfoWrapper, ApiLimitError, type IPinfo } from "node-ipinfo";
-import { useRuntimeConfig } from "#imports";
 
-export async function getUserIp(event: H3Event) {
-  const naturalIp = getRequestIP(event, { xForwardedFor: true }) ?? getRequestIP(event);
-
-  if (naturalIp && !isLocalIP(naturalIp)) {
-    return naturalIp;
-  }
-
-  try {
-    const remoteIP = await ofetch<{ ip: string }>("https://ifconfig.co/json");
-    return remoteIP.ip;
-  }
-  catch (error) {
-    console.error("Error fetching public IP:", error);
-    return undefined;
-  }
+interface IPInfo {
+  ip: string;
+  ip_decimal: number;
+  country: string;
+  country_iso: string;
+  country_eu: boolean;
+  region_name: string;
+  region_code: string;
+  zip_code: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  time_zone: string;
+  asn: string;
+  asn_org: string;
+  hostname: string;
+  user_agent: {
+    product: string;
+    version: string;
+    comment: string;
+    raw_value: string;
+  };
 }
 
-export async function getUserLocation(event: H3Event): Promise<IPinfo | null> {
-  const config = useRuntimeConfig();
+export async function getUserConfig(event: H3Event): Promise<IPInfo | undefined> {
+  const naturalIp = getRequestIP(event, { xForwardedFor: true }) ?? getRequestIP(event);
+  const queryParams = new URLSearchParams();
 
-  const ip = await getUserIp(event);
-
-  if (!ip) {
-    return null;
+  if (naturalIp && !isLocalIP(naturalIp)) {
+    queryParams.append("ip", naturalIp);
   }
 
   try {
-    const ipinfoWrapper = new IPinfoWrapper(config.ipinfoToken);
-    return await ipinfoWrapper.lookupIp(ip);
+    const remoteIP = await ofetch<IPInfo>("https://ifconfig.co/json", {
+      query: queryParams,
+    });
+    return remoteIP;
   }
 
   catch (error) {
-    if (error instanceof ApiLimitError) {
-      console.warn("IPinfo API limit reached, returning undefined for country.");
-      return null;
-    }
-    console.error("Error fetching user country:", error);
-    return null;
+    console.error("Error fetching public config:", error);
+    return undefined;
   }
 }
 
