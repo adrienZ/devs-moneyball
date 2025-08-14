@@ -9,6 +9,9 @@ import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
 import CriteriaPicker from "~/components/CriteriaPicker.vue";
 
+const params = useUrlSearchParams("history");
+const route = useRoute();
+
 const {
   locationInput,
   locationOptions, debouncedKeystoreCallback,
@@ -17,15 +20,13 @@ const {
   searchTerm,
 } = useLocationSearch();
 
-const { languagesList, selectedLanguages } = useLanguageSearch();
+const { languagesList, selectedLanguages, handleLanguageValueChange } = useLanguageSearch();
 
 // "inlined composable" https://www.youtube.com/watch?v=iKaDFAxzJyw&t=825s
 function useLocationSearch() {
-  const params = useUrlSearchParams("history");
   const locationInput = ref<LocationSuggestion>();
   const locationOptions = ref<LocationSuggestion[]>([]);
   const searchTerm = ref("");
-  const route = useRoute();
 
   const query = useAsyncData("location-query", () => {
     return $fetch("/api/github/location-search", {
@@ -102,8 +103,27 @@ function useLanguageSearch() {
     transform: list => list.map(lang => lang.label),
   });
 
+  function handleLanguageValueChange() {
+    if (selectedLanguages.value.length > 0) {
+      params.languages = selectedLanguages.value.join(",");
+    }
+    else {
+      delete params.languages;
+    }
+  }
+
+  function init() {
+    const initialValue = import.meta.server ? route.query.languages?.toString() : params.languages?.toString();
+    if (initialValue) {
+      selectedLanguages.value = initialValue.split(",").map(lang => lang.trim());
+    }
+  }
+
+  init();
+
   return {
     selectedLanguages,
+    handleLanguageValueChange,
     languagesList: query.data,
     query,
   };
@@ -114,6 +134,7 @@ interface User {
   followers: { totalCount: number };
   name: string | null;
   createdAt: string;
+  location?: string | null;
 }
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
@@ -254,6 +275,12 @@ const columns: TableColumn<User>[] = [
     enableSorting: true,
   },
   {
+    accessorKey: "location",
+    header: ({ column }) => getHeader(column, "Location"),
+    cell: ({ row }) => row.original.location || "-",
+    enableSorting: false,
+  },
+  {
     accessorKey: "createdAt",
     header: ({ column }) => getHeader(column, "Account Age"),
     cell: ({ row }) => `${Math.floor(getAge(row.original.createdAt))} years`,
@@ -309,7 +336,7 @@ const sorting = ref([]);
           placeholder="PHP, JavaScript, Python..."
           clearable
           multiple
-          @update:moddddelValue="handleLocationValueChange"
+          @update:modelValue="handleLanguageValueChange"
         />
       </UFormField>
       <UFormField

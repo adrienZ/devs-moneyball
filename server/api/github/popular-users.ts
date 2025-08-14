@@ -12,6 +12,7 @@ query PopularUsers($query: String!) {
       ... on User {
         login
         name
+        location
         followers {
           totalCount
         }
@@ -26,6 +27,7 @@ interface User {
   name: string | null;
   followers: { totalCount: number };
   createdAt: string;
+  location?: string | null;
 }
 
 interface PopularUsersQuery {
