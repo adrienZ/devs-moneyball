@@ -2,7 +2,7 @@
 import type { TableColumn } from "@nuxt/ui";
 import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
-import { ref, computed, h, resolveComponent } from "vue";
+import { ref, computed, h, resolveComponent, watch } from "vue";
 import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
@@ -16,6 +16,8 @@ const {
   handleLocationValueChange,
   searchTerm,
 } = useLocationSearch();
+
+const { languagesList, selectedLanguages } = useLanguageSearch();
 
 // "inlined composable" https://www.youtube.com/watch?v=iKaDFAxzJyw&t=825s
 function useLocationSearch() {
@@ -91,6 +93,22 @@ function useLocationSearch() {
   };
 }
 
+function useLanguageSearch() {
+  const selectedLanguages = ref<string[]>([]);
+
+  const query = useAsyncData("language-query", () => {
+    return $fetch("/api/languages");
+  }, {
+    transform: list => list.map(lang => lang.label),
+  });
+
+  return {
+    selectedLanguages,
+    languagesList: query.data,
+    query,
+  };
+}
+
 interface User {
   login: string;
   followers: { totalCount: number };
@@ -103,8 +121,44 @@ const getAge = (createdAt: string) => (Date.now() - new Date(createdAt).getTime(
 
 const minFollowers = ref<number | undefined>();
 const maxFollowers = ref<number | undefined>();
-const minAge = ref<number | undefined>();
-const maxAge = ref<number | undefined>();
+
+// Calculate max possible age (current year - 2008)
+const currentYear = new Date().getFullYear();
+const minAccountYear = 2008;
+const maxPossibleAge = currentYear - minAccountYear;
+const minAge = ref<number>(0);
+const maxAge = ref<number>(maxPossibleAge);
+
+const ageOptions = Array.from({ length: maxPossibleAge + 1 }, (_, i) => ({
+  label: `${i}`,
+  value: i,
+}));
+
+const minAgeOptions = computed(() =>
+  ageOptions.map(opt => ({
+    ...opt,
+    disabled: opt.value > maxAge.value,
+  })),
+);
+
+const maxAgeOptions = computed(() =>
+  ageOptions.map(opt => ({
+    ...opt,
+    disabled: opt.value < minAge.value,
+  })),
+);
+
+// Ensure minAge <= maxAge and maxAge >= minAge
+watch(minAge, (newMin) => {
+  if (newMin > maxAge.value) {
+    maxAge.value = newMin;
+  }
+});
+watch(maxAge, (newMax) => {
+  if (newMax < minAge.value) {
+    minAge.value = newMax;
+  }
+});
 const sortField = ref<"followers" | "age">("followers");
 const sortOrder = ref<"asc" | "desc">("desc");
 
@@ -120,7 +174,6 @@ const sortOrderOptions = [
 const serverEvent = useRequestEvent();
 const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
 const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.region_name);
-
 const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
     minFollowers: minFollowers.value,
@@ -130,11 +183,29 @@ const { data: users, pending: loading, error } = await useAsyncData("list", () =
     sortField: sortField.value,
     sortOrder: sortOrder.value,
     location: queryLocation.value,
+    languages: selectedLanguages.value.join(","),
   },
 }), {
-  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation],
+  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages],
 },
 );
+
+watch(userConfig, (newConfig) => {
+  if (newConfig?.region_name) {
+    const location: LocationSuggestion = {
+      name: newConfig.region_name,
+      label: newConfig.region_name,
+      country: newConfig.country,
+      city: newConfig.city,
+      state: newConfig.region_name,
+      lat: newConfig.latitude,
+      lon: newConfig.longitude,
+    };
+
+    locationInput.value = location;
+    locationOptions.value = [location];
+  }
+}, { immediate: true, deep: true });
 
 const UButton = resolveComponent("UButton");
 
@@ -228,6 +299,20 @@ const sorting = ref([]);
         />
       </UFormField>
       <UFormField
+        v-if="languagesList"
+        label="Languages"
+        class="col-span-2 md:col-span-1"
+      >
+        <UInputMenu
+          v-model="selectedLanguages"
+          :items="languagesList"
+          placeholder="PHP, JavaScript, Python..."
+          clearable
+          multiple
+          @update:moddddelValue="handleLocationValueChange"
+        />
+      </UFormField>
+      <UFormField
         :label="`Min Followers: ${minFollowers ?? 0}`"
         class="col-span-2 md:col-span-1"
       >
@@ -248,21 +333,25 @@ const sorting = ref([]);
         />
       </UFormField>
       <UFormField
-        label="Min Age (years)"
+        label="Min Age"
         class="col-span-1"
       >
-        <UInputNumber
+        <USelect
           v-model="minAge"
+          :items="minAgeOptions"
           class="w-full"
+          clearable
         />
       </UFormField>
       <UFormField
-        label="Max Age (years)"
+        label="Max Age"
         class="col-span-1"
       >
-        <UInputNumber
+        <USelect
           v-model="maxAge"
+          :items="maxAgeOptions"
           class="w-full"
+          clearable
         />
       </UFormField>
       <UFormField

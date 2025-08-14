@@ -42,6 +42,7 @@ const querySchema = z.object({
   location: z.string().optional(),
   sortField: z.enum(["followers", "age"]).default("followers"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  languages: z.string().optional(), // comma-separated list
 });
 
 export default defineCachedEventHandler(async (event) => {
@@ -65,6 +66,16 @@ export default defineCachedEventHandler(async (event) => {
     const date = new Date(now - params.maxAge * MS_IN_YEAR).toISOString().split("T")[0];
     parts.push(`created:>${date}`);
   }
+  // Add language qualifiers to the search query if provided
+  if (params.languages) {
+    const filterLangs = params.languages.split(",").map(l => l.trim()).filter(Boolean);
+    for (const lang of filterLangs) {
+      parts.push(`language:${lang}`);
+    }
+  }
+
+  console.log(params.languages, parts);
+
   if (params.sortField === "followers") {
     parts.push(`sort:followers-${params.sortOrder}`);
   }
