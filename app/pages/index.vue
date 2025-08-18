@@ -4,7 +4,7 @@ import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
 import { ref, computed, h, resolveComponent, watch } from "vue";
 import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
-import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
+import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu, UPagination } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
 import CriteriaPicker from "~/components/CriteriaPicker.vue";
@@ -193,9 +193,16 @@ const sortOrderOptions = [
 ];
 
 const serverEvent = useRequestEvent();
+
+// Pagination state
+const page = ref(1);
+const pageSize = ref(20);
+const totalPages = ref(1);
+
 const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
 const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.region_name);
-const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
+
+const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
     minFollowers: minFollowers.value,
     maxFollowers: maxFollowers.value,
@@ -205,11 +212,15 @@ const { data: users, pending: loading, error } = await useAsyncData("list", () =
     sortOrder: sortOrder.value,
     location: queryLocation.value,
     languages: selectedLanguages.value.join(","),
+    page: page.value,
+    pageSize: pageSize.value,
   },
 }), {
-  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages],
-},
-);
+  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, page, pageSize],
+});
+
+const users = computed(() => paginated.value?.users ?? []);
+totalPages.value = paginated.value?.totalPages ?? 1;
 
 watch(userConfig, (newConfig) => {
   if (newConfig?.region_name) {
@@ -408,5 +419,17 @@ const sorting = ref([]);
       :columns="columns"
       class="mt-6"
     />
+    <div class="flex justify-center mt-8">
+      <UPagination
+        v-model:page="page"
+        :pageCount="totalPages"
+        :total="paginated?.total ?? 0"
+        :pageSize="pageSize"
+        :showFirstLast="true"
+        :showEdges="true"
+        :showJump="true"
+        class="my-4"
+      />
+    </div>
   </div>
 </template>
