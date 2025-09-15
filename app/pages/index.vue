@@ -318,7 +318,7 @@ const sorting = ref([]);
       Top 50 Users in {{ queryLocation || "the World" }}
     </h2>
 
-    <CriteriaPicker />
+    <!-- <CriteriaPicker /> -->
 
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
       <UFormField
