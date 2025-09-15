@@ -2,11 +2,15 @@
 import type { TableColumn } from "@nuxt/ui";
 import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
-import { ref, computed, h, resolveComponent } from "vue";
+import { ref, computed, h, resolveComponent, watch } from "vue";
 import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
-import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
+import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu, UPagination } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
+import CriteriaPicker from "~/components/CriteriaPicker.vue";
+
+const params = useUrlSearchParams("history");
+const route = useRoute();
 
 const {
   locationInput,
@@ -16,13 +20,13 @@ const {
   searchTerm,
 } = useLocationSearch();
 
+const { languagesList, selectedLanguages, handleLanguageValueChange } = useLanguageSearch();
+
 // "inlined composable" https://www.youtube.com/watch?v=iKaDFAxzJyw&t=825s
 function useLocationSearch() {
-  const params = useUrlSearchParams("history");
   const locationInput = ref<LocationSuggestion>();
   const locationOptions = ref<LocationSuggestion[]>([]);
   const searchTerm = ref("");
-  const route = useRoute();
 
   const query = useAsyncData("location-query", () => {
     return $fetch("/api/github/location-search", {
@@ -90,11 +94,47 @@ function useLocationSearch() {
   };
 }
 
+function useLanguageSearch() {
+  const selectedLanguages = ref<string[]>([]);
+
+  const query = useAsyncData("language-query", () => {
+    return $fetch("/api/languages");
+  }, {
+    transform: list => list.map(lang => lang.label),
+  });
+
+  function handleLanguageValueChange() {
+    if (selectedLanguages.value.length > 0) {
+      params.languages = selectedLanguages.value.join(",");
+    }
+    else {
+      delete params.languages;
+    }
+  }
+
+  function init() {
+    const initialValue = import.meta.server ? route.query.languages?.toString() : params.languages?.toString();
+    if (initialValue) {
+      selectedLanguages.value = initialValue.split(",").map(lang => lang.trim());
+    }
+  }
+
+  init();
+
+  return {
+    selectedLanguages,
+    handleLanguageValueChange,
+    languagesList: query.data,
+    query,
+  };
+}
+
 interface User {
   login: string;
   followers: { totalCount: number };
   name: string | null;
   createdAt: string;
+  location?: string | null;
 }
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
@@ -102,8 +142,44 @@ const getAge = (createdAt: string) => (Date.now() - new Date(createdAt).getTime(
 
 const minFollowers = ref<number | undefined>();
 const maxFollowers = ref<number | undefined>();
-const minAge = ref<number | undefined>();
-const maxAge = ref<number | undefined>();
+
+// Calculate max possible age (current year - 2008)
+const currentYear = new Date().getFullYear();
+const minAccountYear = 2008;
+const maxPossibleAge = currentYear - minAccountYear;
+const minAge = ref<number>(0);
+const maxAge = ref<number>(maxPossibleAge);
+
+const ageOptions = Array.from({ length: maxPossibleAge + 1 }, (_, i) => ({
+  label: `${i}`,
+  value: i,
+}));
+
+const minAgeOptions = computed(() =>
+  ageOptions.map(opt => ({
+    ...opt,
+    disabled: opt.value > maxAge.value,
+  })),
+);
+
+const maxAgeOptions = computed(() =>
+  ageOptions.map(opt => ({
+    ...opt,
+    disabled: opt.value < minAge.value,
+  })),
+);
+
+// Ensure minAge <= maxAge and maxAge >= minAge
+watch(minAge, (newMin) => {
+  if (newMin > maxAge.value) {
+    maxAge.value = newMin;
+  }
+});
+watch(maxAge, (newMax) => {
+  if (newMax < minAge.value) {
+    minAge.value = newMax;
+  }
+});
 const sortField = ref<"followers" | "age">("followers");
 const sortOrder = ref<"asc" | "desc">("desc");
 
@@ -117,10 +193,16 @@ const sortOrderOptions = [
 ];
 
 const serverEvent = useRequestEvent();
+
+// Pagination state
+const page = ref(1);
+const pageSize = ref(20);
+const totalPages = ref(1);
+
 const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
 const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.region_name);
 
-const { data: users, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
+const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
     minFollowers: minFollowers.value,
     maxFollowers: maxFollowers.value,
@@ -129,11 +211,33 @@ const { data: users, pending: loading, error } = await useAsyncData("list", () =
     sortField: sortField.value,
     sortOrder: sortOrder.value,
     location: queryLocation.value,
+    languages: selectedLanguages.value.join(","),
+    page: page.value,
+    pageSize: pageSize.value,
   },
 }), {
-  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation],
-},
-);
+  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, page, pageSize],
+});
+
+const users = computed(() => paginated.value?.users ?? []);
+totalPages.value = paginated.value?.totalPages ?? 1;
+
+watch(userConfig, (newConfig) => {
+  if (newConfig?.region_name) {
+    const location: LocationSuggestion = {
+      name: newConfig.region_name,
+      label: newConfig.region_name,
+      country: newConfig.country,
+      city: newConfig.city,
+      state: newConfig.region_name,
+      lat: newConfig.latitude,
+      lon: newConfig.longitude,
+    };
+
+    locationInput.value = location;
+    locationOptions.value = [location];
+  }
+}, { immediate: true, deep: true });
 
 const UButton = resolveComponent("UButton");
 
@@ -182,6 +286,12 @@ const columns: TableColumn<User>[] = [
     enableSorting: true,
   },
   {
+    accessorKey: "location",
+    header: ({ column }) => getHeader(column, "Location"),
+    cell: ({ row }) => row.original.location || "-",
+    enableSorting: false,
+  },
+  {
     accessorKey: "createdAt",
     header: ({ column }) => getHeader(column, "Account Age"),
     cell: ({ row }) => `${Math.floor(getAge(row.original.createdAt))} years`,
@@ -207,6 +317,9 @@ const sorting = ref([]);
     <h2 class="text-3xl font-bold py-8">
       Top 50 Users in {{ queryLocation || "the World" }}
     </h2>
+
+    <!-- <CriteriaPicker /> -->
+
     <div class="filters grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-elevated rounded-xl shadow">
       <UFormField
         label="Location"
@@ -221,6 +334,20 @@ const sorting = ref([]);
           clearable
           @update:searchTerm="debouncedKeystoreCallback"
           @update:modelValue="handleLocationValueChange"
+        />
+      </UFormField>
+      <UFormField
+        v-if="languagesList"
+        label="Languages"
+        class="col-span-2 md:col-span-1"
+      >
+        <UInputMenu
+          v-model="selectedLanguages"
+          :items="languagesList"
+          placeholder="PHP, JavaScript, Python..."
+          clearable
+          multiple
+          @update:modelValue="handleLanguageValueChange"
         />
       </UFormField>
       <UFormField
@@ -244,21 +371,25 @@ const sorting = ref([]);
         />
       </UFormField>
       <UFormField
-        label="Min Age (years)"
+        label="Min Age"
         class="col-span-1"
       >
-        <UInputNumber
+        <USelect
           v-model="minAge"
+          :items="minAgeOptions"
           class="w-full"
+          clearable
         />
       </UFormField>
       <UFormField
-        label="Max Age (years)"
+        label="Max Age"
         class="col-span-1"
       >
-        <UInputNumber
+        <USelect
           v-model="maxAge"
+          :items="maxAgeOptions"
           class="w-full"
+          clearable
         />
       </UFormField>
       <UFormField
@@ -288,5 +419,17 @@ const sorting = ref([]);
       :columns="columns"
       class="mt-6"
     />
+    <div class="flex justify-center mt-8">
+      <UPagination
+        v-model:page="page"
+        :pageCount="totalPages"
+        :total="paginated?.total ?? 0"
+        :pageSize="pageSize"
+        :showFirstLast="true"
+        :showEdges="true"
+        :showJump="true"
+        class="my-4"
+      />
+    </div>
   </div>
 </template>
