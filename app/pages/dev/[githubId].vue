@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useFetch } from "nuxt/app";
+import { useAsyncData } from "nuxt/app";
 import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
 import { UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
 import type { TabsItem, TableColumn } from "@nuxt/ui";
+import { $fetch } from "ofetch";
 
 interface PullRequestItem {
   title: string;
@@ -74,12 +75,16 @@ interface UserMetrics {
 const route = useRoute();
 const githubId = (route.params as { githubId: string }).githubId;
 
-const { data: user, pending: loading, error } = await useFetch<UserMetrics>(
-  `/api/github/users/${githubId}`,
+const { data: user, pending: loading, error } = useAsyncData(
+  "user-metrics",
+  () => $fetch<UserMetrics>(`/api/github/users/${githubId}`),
 );
 
-const { data: contributions } = await useFetch(
-  `/api/github/users/${githubId}/contributions`,
+const { data: contributions } = useAsyncData(
+  "user-contributions",
+  () => $fetch<PullRequestItem[]>(
+    `/api/github/users/${githubId}/contributions`,
+  ),
   {
     default: () => [],
   },

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 async function triggerDevTools() {
-  // @ts-expect-error dev-only module
+  // @ts-error dev-only module
   const { useNuxtDevTools } = await import("#imports");
   const devtoolsClient = useNuxtDevTools();
   devtoolsClient.value?.devtools.open();
