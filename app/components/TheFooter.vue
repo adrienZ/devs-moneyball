@@ -1,6 +1,6 @@
-<!-- <template>
+<template>
   <footer>
-    <hr />
+    <hr>
     <div class="flex items-center justify-between py-2 px-6 bg-black">
       <DevOnly>
         <div class="max-w-5xl mx-auto">
@@ -10,7 +10,6 @@
         </div>
       </DevOnly>
     </div>
-
   </footer>
 </template>
 
@@ -23,4 +22,4 @@ function triggerDevTools() {
     devtoolsClient.value?.devtools.open();
   });
 }
-</script> -->
+</script>

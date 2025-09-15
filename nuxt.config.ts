@@ -27,6 +27,11 @@ export default defineNuxtConfig({
     experimental: {
       tasks: true,
     },
+    devStorage: {
+      cache: {
+        driver: "null", // no-cache
+      },
+    },
   },
   typescript: {
     typeCheck: true,

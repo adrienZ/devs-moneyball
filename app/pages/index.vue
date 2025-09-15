@@ -7,7 +7,7 @@ import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu, UPagination } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
-import CriteriaPicker from "~/components/CriteriaPicker.vue";
+// import CriteriaPicker from "~/components/CriteriaPicker.vue";
 
 const params = useUrlSearchParams("history");
 const route = useRoute();

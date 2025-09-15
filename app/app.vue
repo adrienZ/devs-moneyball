@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { UApp, UContainer } from "#components";
-// import TheFooter from './components/TheFooter.vue';
+import TheFooter from "~/components/TheFooter.vue";
 </script>
 
 <template>
@@ -10,6 +10,6 @@ import { UApp, UContainer } from "#components";
         <NuxtPage />
       </UContainer>
     </UApp>
-    <!-- <TheFooter /> -->
+    <TheFooter />
   </div>
 </template>

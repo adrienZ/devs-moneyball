@@ -1,6 +1,41 @@
 import { getRouterParam } from "h3";
 import { useRuntimeConfig } from "#imports";
 import { defineCachedEventHandler } from "nitropack/runtime";
+import { graphql } from "@octokit/graphql";
+
+interface GitHubUserResponse {
+  user: {
+    login: string;
+    followers: { totalCount: number };
+    following: { totalCount: number };
+    repositories: {
+      totalCount: number;
+      nodes: Array<{
+        stargazerCount: number;
+        forkCount: number;
+        primaryLanguage: { name: string } | null;
+      } | null> | null;
+    };
+    repositoriesContributedTo: {
+      totalCount: number;
+      nodes: Array<{
+        nameWithOwner: string;
+        url: string;
+        stargazerCount: number;
+        forkCount: number;
+        primaryLanguage: { name: string } | null;
+        owner:
+          | { __typename: "Organization"; login: string; name: string | null }
+          | { __typename: "User"; login: string };
+      } | null> | null;
+    };
+    gists: { totalCount: number };
+    createdAt: string;
+    bio: string | null;
+  };
+}
+
+export type { GitHubUserResponse };
 
 export default defineCachedEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
@@ -9,43 +44,132 @@ export default defineCachedEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig();
-  const response = await fetch(`https://api.github.com/users/${login}`, {
+  const graphqlWithAuth = graphql.defaults({
     headers: {
-      "Authorization": `Bearer ${config.public.githubToken}`,
-      "User-Agent": "nuxt-app",
+      authorization: `Bearer ${config.public.githubToken}`,
     },
   });
 
-  if (!response.ok) {
-    return { error: `GitHub API error: ${response.status}` };
+  let data:
+    | {
+      login: string;
+      followers: number;
+      following: number;
+      public_repos: number;
+      public_gists: number;
+      created_at: string;
+      bio: string | null;
+    }
+    | undefined;
+  let repoNodes: Array<{
+    stargazerCount: number;
+    forkCount: number;
+    primaryLanguage: { name: string } | null;
+  }> = [];
+
+  let userData: GitHubUserResponse["user"];
+  try {
+    const { user } = await graphqlWithAuth<GitHubUserResponse>(`
+      query GetUserInfo($login: String!) {
+        user(login: $login) {
+          login
+          followers {
+            totalCount
+          }
+          following {
+            totalCount
+          }
+          repositories(first: 100, privacy: PUBLIC) {
+            totalCount
+            nodes {
+              stargazerCount
+              forkCount
+              primaryLanguage { name }
+            }
+          }
+          repositoriesContributedTo(
+            first: 100
+            privacy: PUBLIC
+            includeUserRepositories: false
+            contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
+          ) {
+            totalCount
+            nodes {
+              nameWithOwner
+              url
+              stargazerCount
+              forkCount
+              primaryLanguage { name }
+              owner {
+                __typename
+                login
+                ... on Organization { name }
+              }
+            }
+          }
+          gists(privacy: PUBLIC) {
+            totalCount
+          }
+          createdAt
+          bio
+        }
+      }
+    `, { login });
+
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    userData = user;
+
+    data = {
+      login: user.login,
+      followers: user.followers.totalCount,
+      following: user.following.totalCount,
+      public_repos: user.repositories.totalCount,
+      public_gists: user.gists.totalCount,
+      created_at: user.createdAt,
+      bio: user.bio,
+    };
+    repoNodes = (user.repositories.nodes ?? []).filter(
+      (n): n is NonNullable<typeof n> => n !== null,
+    );
+  }
+  catch (error) {
+    console.error("GitHub GraphQL error:", error);
+    return { error: "GitHub API error" };
   }
 
-  const data = await response.json();
-
-  const reposRes = await fetch(`https://api.github.com/users/${login}/repos?per_page=100`, {
-    headers: {
-      "Authorization": `Bearer ${config.public.githubToken}`,
-      "User-Agent": "nuxt-app",
-    },
-  });
-
-  if (!reposRes.ok) {
-    return { error: `GitHub API error: ${reposRes.status}` };
+  if (!data) {
+    return { error: "Unexpected error" };
   }
 
-  const repos = await reposRes.json();
-  // @ts-expect-error TODO: Fix types
-  const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
-  // @ts-expect-error TODO: Fix types
-  const totalForks = repos.reduce((sum, r) => sum + (r.forks_count || 0), 0);
+  const totalStars = repoNodes.reduce((sum, r) => sum + r.stargazerCount, 0);
+  const totalForks = repoNodes.reduce((sum, r) => sum + r.forkCount, 0);
   const avgStarsPerRepo = data.public_repos > 0 ? (totalStars / data.public_repos) : 0;
-  // @ts-expect-error TODO: Fix types
-  const langCount = repos.reduce((acc: Record<string, number>, r) => {
-    if (r.language) acc[r.language] = (acc[r.language] || 0) + 1;
+  const langCount: Record<string, number> = repoNodes.reduce((acc: Record<string, number>, r) => {
+    const lang = r.primaryLanguage?.name;
+    if (lang) acc[lang] = (acc[lang] || 0) + 1;
     return acc;
   }, {});
-  // @ts-expect-error TODO: Fix types
-  const topLanguages = Object.entries(langCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([lang]) => lang);
+  const topLanguages = Object.entries(langCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([lang]) => lang);
+
+  const orgContributedRepos = (userData.repositoriesContributedTo.nodes ?? [])
+    .filter((n): n is NonNullable<typeof n> => !!n && n.owner.__typename === "Organization")
+    .map(repo => ({
+      nameWithOwner: repo.nameWithOwner,
+      url: repo.url,
+      stargazerCount: repo.stargazerCount,
+      forkCount: repo.forkCount,
+      primaryLanguage: repo.primaryLanguage?.name ?? null,
+      organization: {
+        login: repo.owner.login,
+        name: repo.owner.__typename === "Organization" ? repo.owner.name : null,
+      },
+    }));
 
   // Criteria calculations (simple heuristics)
   const impactScore = Math.min(100, (totalStars + totalForks) / 100); // scale
@@ -104,6 +228,7 @@ export default defineCachedEventHandler(async (event) => {
   else cons.push("Code quality signals need improvement");
 
   return {
+    debug: userData,
     login: data.login,
     followers: data.followers,
     following: data.following,
@@ -115,6 +240,7 @@ export default defineCachedEventHandler(async (event) => {
     totalForks,
     avgStarsPerRepo,
     topLanguages,
+    orgContributedRepos,
     devScore,
     letter,
     summary,

@@ -1,11 +1,57 @@
 <script setup lang="ts">
 import { useFetch } from "nuxt/app";
 import { useRoute } from "vue-router";
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
-import { UTable, UTooltip } from "#components";
+import { UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
+import type { TabsItem, TableColumn } from "@nuxt/ui";
+
+interface PullRequestItem {
+  title: string;
+  url: string;
+  number: number;
+  createdAt: string;
+  mergedAt: string;
+  repository: {
+    stars: number;
+    nameWithOwner: string;
+    url: string;
+    ownerAvatarUrl: string;
+  };
+}
 
 interface UserMetrics {
+  debug: {
+    login: string;
+    followers: { totalCount: number };
+    following: { totalCount: number };
+    repositories: {
+      totalCount: number;
+      nodes: Array<{
+        stargazerCount: number;
+        forkCount: number;
+        primaryLanguage: { name: string } | null;
+      } | null> | null;
+    };
+    repositoriesContributedTo: {
+      totalCount: number;
+      nodes: Array<{
+        nameWithOwner: string;
+        url: string;
+        stargazerCount: number;
+        forkCount: number;
+        primaryLanguage: { name: string } | null;
+        owner: {
+          __typename: string;
+          login: string;
+          name?: string | null;
+        };
+      } | null> | null;
+    };
+    gists: { totalCount: number };
+    createdAt: string;
+    bio: string | null;
+  };
   login: string;
   followers: number;
   following: number;
@@ -31,6 +77,20 @@ const githubId = (route.params as { githubId: string }).githubId;
 const { data: user, pending: loading, error } = await useFetch<UserMetrics>(
   `/api/github/users/${githubId}`,
 );
+
+const { data: contributions } = await useFetch(
+  `/api/github/users/${githubId}/contributions`,
+  {
+    default: () => [],
+  },
+);
+
+const tableColumns: TableColumn<PullRequestItem>[] = [
+  { id: "mergedAt", header: "Merged at" },
+  { id: "repository", header: "Repository" },
+  { id: "commit", header: "Commit" },
+  { id: "stars", header: "Stars ⭐️" },
+] as const;
 
 const followersPerRepo = computed(() => {
   if (user.value && user.value.public_repos > 0) {
@@ -80,6 +140,26 @@ const rows = computed(() => {
     value,
   }));
 });
+
+const tabsItems = shallowRef<TabsItem[]>([
+  {
+    label: "Overview",
+    icon: "i-lucide-user",
+    slot: "overview" as const,
+
+  },
+  {
+    label: "History",
+    icon: "i-lucide-history",
+    slot: "history" as const,
+  },
+  {
+    label: "Debug",
+    icon: "i-lucide-lock",
+    slot: "debug" as const,
+
+  },
+]);
 </script>
 
 <template>
@@ -142,108 +222,164 @@ const rows = computed(() => {
         </p>
       </div>
     </div>
-    <div
+
+    <UTabs
       v-if="user"
-      class="grid lg:grid-cols-3 gap-6 py-6 max-w-7xl mx-auto"
+      :items="tabsItems"
+      class="w-full gap-0 my-6"
     >
-      <!-- LEFT PANEL -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Overall rating -->
-        <UCard>
-          <template #header>
-            <span class="text-sm">Overall Rating</span>
-          </template>
-          <div class="flex flex-col items-start">
-            <UTooltip :text="`${user?.devScore} / 100`">
-              <UBadge
-                :color="
-                  user?.devScore >= 85 ? 'success'
-                  : user?.devScore >= 70 ? 'warning'
-                    : user?.devScore >= 50 ? 'secondary'
-                      : 'error'
-                "
-                size="md"
-                class="text-2xl font-bold px-4 py-2 mb-2"
-              >
-                {{ user?.letter }}
-              </UBadge>
-            </UTooltip>
-            <span class="mt-2 text-yellow-400 font-medium">{{ user?.summary }}</span>
+      <template #overview>
+        <div
+          class="my-6 grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
+        >
+          <!-- LEFT PANEL -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Overall rating -->
+            <UCard>
+              <template #header>
+                <span class="text-sm">Overall Rating</span>
+              </template>
+              <div class="flex flex-col items-start">
+                <UTooltip :text="`${user?.devScore} / 100`">
+                  <UBadge
+                    :color="
+                      user?.devScore >= 85 ? 'success'
+                      : user?.devScore >= 70 ? 'warning'
+                        : user?.devScore >= 50 ? 'secondary'
+                          : 'error'
+                    "
+                    size="md"
+                    class="text-2xl font-bold px-4 py-2 mb-2"
+                  >
+                    {{ user?.letter }}
+                  </UBadge>
+                </UTooltip>
+                <span class="mt-2 text-yellow-400 font-medium">{{ user?.summary }}</span>
+              </div>
+            </UCard>
+
+            <!-- Pros -->
+            <UCard>
+              <template #header>
+                <h3 class="text-lg font-bold mb-2">
+                  Pros
+                </h3>
+              </template>
+              <ul class="space-y-2">
+                <li
+                  v-for="pro in user?.pros"
+                  :key="pro"
+                  class="flex items-center"
+                >
+                  <UIcon
+                    name="i-heroicons-check-circle-solid"
+                    class="text-green-500 mr-2"
+                  />
+                  <span class="text-green-700">{{ pro }}</span>
+                </li>
+              </ul>
+            </UCard>
+
+            <!-- Cons -->
+            <UCard>
+              <template #header>
+                <h3 class="text-lg font-bold mb-2">
+                  Cons
+                </h3>
+              </template>
+              <ul class="space-y-2">
+                <li
+                  v-for="con in user?.cons"
+                  :key="con"
+                  class="flex items-center"
+                >
+                  <UIcon
+                    name="i-heroicons-x-circle-solid"
+                    class="text-red-500 mr-2"
+                  />
+                  <span class="text-red-700">{{ con }}</span>
+                </li>
+              </ul>
+            </UCard>
           </div>
-        </UCard>
 
-        <!-- Pros -->
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-bold mb-2">
-              Pros
-            </h3>
-          </template>
-          <ul class="space-y-2">
-            <li
-              v-for="pro in user?.pros"
-              :key="pro"
-              class="flex items-center"
-            >
-              <UIcon
-                name="i-heroicons-check-circle-solid"
-                class="text-green-500 mr-2"
-              />
-              <span class="text-green-700">{{ pro }}</span>
-            </li>
-          </ul>
-        </UCard>
+          <!-- RIGHT PANEL -->
+          <div class="lg:col-span-1 space-y-6">
+            <!-- Radar Chart -->
+            <UCard>
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Criteria Breakdown
+                </h3>
+              </template>
+              <div class="max-w-md mx-auto">
+                <TheChart
+                  :criteria="user?.criteria"
+                  :dark="true"
+                />
+              </div>
+            </UCard>
 
-        <!-- Cons -->
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-bold mb-2">
-              Cons
-            </h3>
-          </template>
-          <ul class="space-y-2">
-            <li
-              v-for="con in user?.cons"
-              :key="con"
-              class="flex items-center"
-            >
-              <UIcon
-                name="i-heroicons-x-circle-solid"
-                class="text-red-500 mr-2"
-              />
-              <span class="text-red-700">{{ con }}</span>
-            </li>
-          </ul>
-        </UCard>
-      </div>
-
-      <!-- RIGHT PANEL -->
-      <div class="lg:col-span-1 space-y-6">
-        <!-- Radar Chart -->
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-bold">
-              Criteria Breakdown
-            </h3>
-          </template>
-          <div class="max-w-md mx-auto">
-            <TheChart
-              :criteria="user?.criteria"
-              :dark="true"
-            />
+            <!-- Key Metrics Table -->
+            <UCard>
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Key Metrics
+                </h3>
+              </template>
+              <UTable :data="rows" />
+            </UCard>
           </div>
-        </UCard>
+        </div>
+      </template>
 
-        <!-- Key Metrics Table -->
-        <UCard>
-          <template #header>
-            <h3 class="text-lg font-bold">
-              Key Metrics
-            </h3>
+      <template #history>
+        <UTable
+          :data="contributions"
+          :columns="tableColumns"
+        >
+          <template #mergedAt-cell="{ row }">
+            <NuxtTime :datetime="row.original.mergedAt" />
           </template>
-          <UTable :data="rows" />
-        </UCard>
-      </div>
-    </div>
+
+          <template #commit-cell="{ row }">
+            <a
+              :href="row.original.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline"
+              :title="row.original.title"
+            >
+              {{ row.original.title.length > 20 ? row.original.title.slice(0, 20) + '...' : row.original.title }}
+            </a>
+          </template>
+
+          <template #repository-cell="{ row }">
+            <ULink
+              :href="row.original.repository.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline"
+            >
+
+              <UAvatar
+                :src="row.original.repository.ownerAvatarUrl"
+                size="xs"
+              />
+
+              <span class="text-xs ml-2">{{ row.original.repository.nameWithOwner }}</span>
+            </ULink>
+          </template>
+
+          <template #stars-cell="{ row }">
+            <span class="text-sm">{{ row.original.repository.stars }}</span>
+          </template>
+        </UTable>
+      </template>
+
+      <template #debug>
+        <pre>{{ user.debug }}</pre>
+      </template>
+    </UTabs>
   </UContainer>
 </template>
