@@ -1,7 +1,8 @@
 <script setup lang="ts">
-async function triggerDevTools() {
-  // @ts-error dev-only module
-  const { useNuxtDevTools } = await import("#imports");
+// @ts-expect-error local dev only
+import { useNuxtDevTools } from "@nuxt/devtools/dist/runtime/use-nuxt-devtools";
+
+function triggerDevTools() {
   const devtoolsClient = useNuxtDevTools();
   devtoolsClient.value?.devtools.open();
 }
