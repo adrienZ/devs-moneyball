@@ -10,6 +10,8 @@ import TheFooter from "~/components/TheFooter.vue";
         <NuxtPage />
       </UContainer>
     </UApp>
-    <TheFooter />
+    <DevOnly>
+      <TheFooter />
+    </DevOnly>
   </div>
 </template>

@@ -15,11 +15,11 @@
 
 <script lang="ts" setup>
 import { DevOnly } from "#components";
+// @ts-expect-error - local dev only
+import { useNuxtDevTools } from "#imports";
 
 function triggerDevTools() {
-  import("#imports").then(({ useNuxtDevTools }) => {
-    const devtoolsClient = useNuxtDevTools();
-    devtoolsClient.value?.devtools.open();
-  });
+  const devtoolsClient = useNuxtDevTools();
+  devtoolsClient.value?.devtools.open();
 }
 </script>
