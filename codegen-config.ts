@@ -15,8 +15,8 @@ const config: CodegenConfig = {
       config: {
         useTypeImports: true,
         immutableTypes: true,
-        skipTypename: true,
         maybeValue: "T | null | undefined",
+        enumsAsTypes: true,
       },
     },
   },
