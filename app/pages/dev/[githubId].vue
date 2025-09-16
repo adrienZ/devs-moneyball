@@ -5,7 +5,6 @@ import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
 import { UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
 import type { TabsItem, TableColumn } from "@nuxt/ui";
-import { $fetch } from "ofetch";
 
 interface PullRequestItem {
   title: string;
