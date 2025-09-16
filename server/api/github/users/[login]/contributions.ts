@@ -25,6 +25,20 @@ const contributionsQuery = graphql(/* GraphQL */ `
   }
 `);
 
+interface PullRequest {
+  title: string;
+  url: string;
+  number: number;
+  createdAt: string;
+  mergedAt: string;
+  repository: {
+    nameWithOwner: string;
+    url: string;
+    stars: number;
+    ownerAvatarUrl: string;
+  };
+}
+
 export default defineEventHandler(async (event: H3Event) => {
   const login = getRouterParam(event, "login");
   if (!login) {
@@ -42,20 +56,32 @@ export default defineEventHandler(async (event: H3Event) => {
     );
 
     const pullRequests = (resp.search.nodes ?? [])
-      .filter(maybeNode => maybeNode !== null)
-      .map(node => ({
-        title: node.title,
-        url: node.url,
-        number: node.number,
-        createdAt: node.createdAt,
-        mergedAt: node.mergedAt as string,
-        repository: {
-          nameWithOwner: node.repository.nameWithOwner,
-          url: node.repository.url,
-          stars: node.repository.stargazerCount,
-          ownerAvatarUrl: node.repository.owner.avatarUrl,
-        },
-      }));
+      .reduce<Array<PullRequest>>((acc, maybeNode) => {
+        if (maybeNode === null) {
+          return acc;
+        }
+
+        if (maybeNode.__typename !== "PullRequest") {
+          return acc;
+        }
+
+        return [
+          ...acc,
+          {
+            title: maybeNode.title,
+            url: maybeNode.url,
+            number: maybeNode.number,
+            createdAt: maybeNode.createdAt,
+            mergedAt: maybeNode.mergedAt as string,
+            repository: {
+              nameWithOwner: maybeNode.repository.nameWithOwner,
+              url: maybeNode.repository.url,
+              stars: maybeNode.repository.stargazerCount,
+              ownerAvatarUrl: maybeNode.repository.owner.avatarUrl,
+            },
+          },
+        ];
+      }, []);
 
     return pullRequests;
   }

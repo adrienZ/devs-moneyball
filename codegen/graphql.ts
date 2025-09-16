@@ -30624,7 +30624,7 @@ export type PopularUsersQueryVariables = Exact<{
 }>;
 
 
-export type PopularUsersQuery = { search: { __typename?: 'SearchResultItemConnection', userCount: number, nodes?: Array<
+export type PopularUsersQuery = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', userCount: number, nodes?: Array<
       | { __typename?: 'App' }
       | { __typename?: 'Discussion' }
       | { __typename?: 'Issue' }
@@ -30640,7 +30640,7 @@ export type GetUserInfoQueryVariables = Exact<{
 }>;
 
 
-export type GetUserInfoQuery = { user?: { __typename?: 'User', login: string, createdAt: any, bio?: string | null, followers: { __typename?: 'FollowerConnection', totalCount: number }, following: { __typename?: 'FollowingConnection', totalCount: number }, repositories: { __typename?: 'RepositoryConnection', totalCount: number, nodes?: Array<{ __typename?: 'Repository', stargazerCount: number, forkCount: number, primaryLanguage?: { __typename?: 'Language', name: string } | null } | null> | null }, repositoriesContributedTo: { __typename?: 'RepositoryConnection', totalCount: number, nodes?: Array<{ __typename?: 'Repository', nameWithOwner: string, url: any, stargazerCount: number, forkCount: number, primaryLanguage?: { __typename?: 'Language', name: string } | null, owner:
+export type GetUserInfoQuery = { __typename?: 'Query', user?: { __typename?: 'User', login: string, createdAt: any, bio?: string | null, followers: { __typename?: 'FollowerConnection', totalCount: number }, following: { __typename?: 'FollowingConnection', totalCount: number }, repositories: { __typename?: 'RepositoryConnection', totalCount: number, nodes?: Array<{ __typename?: 'Repository', stargazerCount: number, forkCount: number, primaryLanguage?: { __typename?: 'Language', name: string } | null } | null> | null }, repositoriesContributedTo: { __typename?: 'RepositoryConnection', totalCount: number, nodes?: Array<{ __typename?: 'Repository', nameWithOwner: string, url: any, stargazerCount: number, forkCount: number, primaryLanguage?: { __typename?: 'Language', name: string } | null, owner:
           | { __typename: 'Organization', name?: string | null, login: string }
           | { __typename: 'User', login: string }
          } | null> | null }, gists: { __typename?: 'GistConnection', totalCount: number } } | null };
@@ -30650,7 +30650,7 @@ export type SearchMergedExternalPRsQueryVariables = Exact<{
 }>;
 
 
-export type SearchMergedExternalPRsQuery = { search: { __typename?: 'SearchResultItemConnection', nodes?: Array<
+export type SearchMergedExternalPRsQuery = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<
       | { __typename?: 'App' }
       | { __typename?: 'Discussion' }
       | { __typename?: 'Issue' }
