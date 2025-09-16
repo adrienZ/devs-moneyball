@@ -12,14 +12,12 @@
     "codegen": "graphql-codegen"
   },
   "dependencies": {
-    "@apollo/client": "^4.0.5",
     "@nuxt/eslint": "1.9.0",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "3.3.4",
     "@octokit/core": "^7.0.3",
     "@octokit/graphql": "^9.0.1",
     "@octokit/graphql-schema": "^15.26.0",
-    "@vue/apollo-composable": "^4.0.0",
     "@vueuse/core": "^13.9.0",
     "chart.js": "^4.5.0",
     "eslint": "^9.35.0",
