@@ -9,15 +9,13 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "codegen": "graphql-codegen"
+    "codegen": "graphql-codegen --config ./codegen-config.ts"
   },
   "dependencies": {
     "@nuxt/eslint": "1.9.0",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "3.3.4",
-    "@octokit/core": "^7.0.3",
     "@octokit/graphql": "^9.0.1",
-    "@octokit/graphql-schema": "^15.26.0",
     "@vueuse/core": "^13.9.0",
     "chart.js": "^4.5.0",
     "eslint": "^9.35.0",
@@ -33,10 +31,10 @@
   },
   "packageManager": "pnpm@10.14.0+sha256.297534e65d5842450539c1e8022c8831ab5e1fe2eb74664787a815519542d620",
   "devDependencies": {
-    "@graphql-codegen/cli": "^6.0.0",
-    "@graphql-codegen/typed-document-node": "^6.0.0",
-    "@graphql-codegen/typescript": "^5.0.0",
-    "@graphql-codegen/typescript-operations": "^5.0.0",
+    "@0no-co/graphqlsp": "^1.15.0",
+    "@graphql-codegen/cli": "6.0.0",
+    "@graphql-typed-document-node/core": "^3.2.0",
+    "@octokit/graphql-schema": "^15.26.0",
     "unplugin-vue-router": "^0.15.0",
     "vue-tsc": "^3.0.7"
   }

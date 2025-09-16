@@ -8,4 +8,7 @@ export default withNuxt([
       "vue/attribute-hyphenation": ["error", "never"],
     },
   },
+  {
+    ignores: ["codegen/yolo/*.ts", "codegen/codegen-output.ts"],
+  },
 ]);

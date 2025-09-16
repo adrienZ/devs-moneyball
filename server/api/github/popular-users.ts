@@ -1,13 +1,13 @@
 // import { defineEventHandler } from 'h3';
 import { defineCachedEventHandler } from "nitropack/runtime";
 import { getQuery } from "h3";
-import { useRuntimeConfig } from "#imports";
 import { z } from "zod";
+import { graphql } from "~~/codegen";
+import { getGithubClient } from "~~/server/githubClient";
 
-// const popularUsersQuery = readFileSync(join(process.cwd(), 'app/graphql/popularUsers.gql'), 'utf8');
-const popularUsersQuery = `
-query PopularUsers($query: String!, $pageSize: Int!) {
-  search(query: $query, type: USER, first: $pageSize) {
+const popularUsersQuery = graphql(/* GraphQL */ `
+query PopularUsers($q: String!, $pageSize: Int!) {
+  search(query: $q, type: USER, first: $pageSize) {
     userCount
     nodes {
       ... on User {
@@ -21,7 +21,7 @@ query PopularUsers($query: String!, $pageSize: Int!) {
       }
     }
   }
-}`;
+}`);
 
 interface User {
   login: string;
@@ -29,10 +29,6 @@ interface User {
   followers: { totalCount: number };
   createdAt: string;
   location?: string | null;
-}
-
-interface PopularUsersQuery {
-  search: { userCount: number; nodes: (User | null)[] };
 }
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
@@ -88,23 +84,15 @@ export default defineCachedEventHandler(async (event) => {
 
   const query = parts.join(" ");
 
-  const config = useRuntimeConfig();
   const pageSize = params.pageSize;
-  const response = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${config.public.githubToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query: popularUsersQuery, variables: { query, pageSize } }),
+
+  const githubClient = getGithubClient();
+  const data = await githubClient.call(popularUsersQuery, {
+    q: query,
+    pageSize,
   });
 
-  if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status}`);
-  }
-
-  const { data } = (await response.json()) as { data: PopularUsersQuery };
-  const users = data.search.nodes.filter((u): u is User => !!u);
+  const users = data.search.nodes?.filter((u): u is User => !!u);
 
   // Pagination logic: only needed for skipping pages (not supported by GitHub search API)
   // For true pagination, you would need to use 'after' cursor, but search API does not support it for users.

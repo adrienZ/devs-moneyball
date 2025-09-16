@@ -1,54 +1,61 @@
 import { getRouterParam } from "h3";
-import { useRuntimeConfig } from "#imports";
 import { defineCachedEventHandler } from "nitropack/runtime";
-import { graphql } from "@octokit/graphql";
+import { getGithubClient } from "~~/server/githubClient";
+import { graphql } from "~~/codegen";
+import type { ResultOf } from "@graphql-typed-document-node/core";
 
-interface GitHubUserResponse {
-  user: {
-    login: string;
-    followers: { totalCount: number };
-    following: { totalCount: number };
-    repositories: {
-      totalCount: number;
-      nodes: Array<{
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-      } | null> | null;
-    };
-    repositoriesContributedTo: {
-      totalCount: number;
-      nodes: Array<{
-        nameWithOwner: string;
-        url: string;
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-        owner:
-          | { __typename: "Organization"; login: string; name: string | null }
-          | { __typename: "User"; login: string };
-      } | null> | null;
-    };
-    gists: { totalCount: number };
-    createdAt: string;
-    bio: string | null;
-  };
-}
-
-export type { GitHubUserResponse };
+const query = graphql(/* GraphQL */ `
+  query GetUserInfo($login: String!) {
+    user(login: $login) {
+      login
+      followers {
+        totalCount
+      }
+      following {
+        totalCount
+      }
+      repositories(first: 100, privacy: PUBLIC) {
+        totalCount
+        nodes {
+          stargazerCount
+          forkCount
+          primaryLanguage { name }
+        }
+      }
+      repositoriesContributedTo(
+        first: 100
+        privacy: PUBLIC
+        includeUserRepositories: false
+        contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
+      ) {
+        totalCount
+        nodes {
+          nameWithOwner
+          url
+          stargazerCount
+          forkCount
+          primaryLanguage { name }
+          owner {
+            __typename
+            login
+            ... on Organization { name }
+          }
+        }
+      }
+      gists(privacy: PUBLIC) {
+        totalCount
+      }
+      createdAt
+      bio
+    }
+  }
+`);
 
 export default defineCachedEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
   if (!login) {
     return { error: "Missing login" };
   }
-
-  const config = useRuntimeConfig();
-  const graphqlWithAuth = graphql.defaults({
-    headers: {
-      authorization: `Bearer ${config.public.githubToken}`,
-    },
-  });
 
   let data:
     | {
@@ -58,63 +65,17 @@ export default defineCachedEventHandler(async (event) => {
       public_repos: number;
       public_gists: number;
       created_at: string;
-      bio: string | null;
+      bio: string | null | undefined;
     }
     | undefined;
   let repoNodes: Array<{
     stargazerCount: number;
     forkCount: number;
-    primaryLanguage: { name: string } | null;
+    primaryLanguage?: { name: string } | null | undefined;
   }> = [];
-
-  let userData: GitHubUserResponse["user"];
+  let userData: ResultOf<typeof query>["user"];
   try {
-    const { user } = await graphqlWithAuth<GitHubUserResponse>(`
-      query GetUserInfo($login: String!) {
-        user(login: $login) {
-          login
-          followers {
-            totalCount
-          }
-          following {
-            totalCount
-          }
-          repositories(first: 100, privacy: PUBLIC) {
-            totalCount
-            nodes {
-              stargazerCount
-              forkCount
-              primaryLanguage { name }
-            }
-          }
-          repositoriesContributedTo(
-            first: 100
-            privacy: PUBLIC
-            includeUserRepositories: false
-            contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
-          ) {
-            totalCount
-            nodes {
-              nameWithOwner
-              url
-              stargazerCount
-              forkCount
-              primaryLanguage { name }
-              owner {
-                __typename
-                login
-                ... on Organization { name }
-              }
-            }
-          }
-          gists(privacy: PUBLIC) {
-            totalCount
-          }
-          createdAt
-          bio
-        }
-      }
-    `, { login });
+    const { user } = await getGithubClient().call(query, { login });
 
     if (!user) {
       return { error: "User not found" };

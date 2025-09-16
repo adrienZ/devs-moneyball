@@ -1,4 +1,6 @@
 #!/usr/bin/env -S node --enable-source-maps
+// @ts-nocheck
+
 /**
  * FM24-style scoring for GitHub developers (updated for stable GitHub GraphQL API)
  * -------------------------------------------------------------
@@ -55,7 +57,7 @@ function withinWindow(dateStr?: string | null, days = DAYS) {
 
 function clamp01(x: number) { return Math.max(0, Math.min(1, x)); }
 function mapTo20(x01: number) { return Math.round(clamp01(x01) * 20); }
-function mean(xs: number[]) { return xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0; }
+function mean(xs: number[]) { return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0; }
 function std(xs: number[]) {
   if (xs.length < 2) return 0;
   const m = mean(xs);
@@ -131,14 +133,14 @@ async function fetchUserWindow(login: string) {
   async function pageAll<T>(q: string, path: string[]): Promise<T[]> {
     let out: T[] = [];
     let cursor: string | undefined;
-    for (let i=0;i<10;i++){
-      const data:any = await gql<any>(q, { login, cursor });
-      let node:any = data;
+    for (let i = 0; i < 10; i++) {
+      const data: any = await gql<any>(q, { login, cursor });
+      let node: any = data;
       for (const p of path) node = node?.[p];
       out = out.concat(node.nodes as T[]);
       if (!node.pageInfo?.hasNextPage) break;
       cursor = node.pageInfo.endCursor;
-      const last:any = node.nodes[node.nodes.length-1];
+      const last: any = node.nodes[node.nodes.length - 1];
       const lastDate = (last?.createdAt || last?.occurredAt);
       if (lastDate && new Date(lastDate) < daysAgo(DAYS + 30)) break;
     }
@@ -146,8 +148,8 @@ async function fetchUserWindow(login: string) {
   }
 
   const [prsAll, reviewContribsAll] = await Promise.all([
-    pageAll<PRNode>(prQuery, ["user","pullRequests"]),
-    pageAll<ReviewContribNode>(reviewContribQuery, ["user","contributionsCollection","pullRequestReviewContributions"]),
+    pageAll<PRNode>(prQuery, ["user", "pullRequests"]),
+    pageAll<ReviewContribNode>(reviewContribQuery, ["user", "contributionsCollection", "pullRequestReviewContributions"]),
   ]);
 
   const prs = prsAll.filter(pr => withinWindow(pr.createdAt, DAYS));
@@ -168,7 +170,7 @@ function computeAttributes(data: { prs: PRNode[]; reviewsAuthored: ReviewContrib
   function firstResponseHours(p: PRNode): number | null {
     const allTimes = [...p.reviews.nodes, ...p.comments.nodes]
       .map(n => new Date(n.createdAt).getTime())
-      .sort((a,b)=>a-b);
+      .sort((a, b) => a - b);
     if (!allTimes.length) return null;
     const t0 = new Date(p.createdAt).getTime();
     const dt = (allTimes[0] - t0) / 36e5;
@@ -180,35 +182,35 @@ function computeAttributes(data: { prs: PRNode[]; reviewsAuthored: ReviewContrib
   const respScore = 1 - clamp01(Math.log10(1 + meanResponse) / Math.log10(49));
 
   const testRatio = mergedPRs.length ? testPRs.length / mergedPRs.length : 0;
-  const median = (xs:number[]) => xs.sort((a,b)=>a-b)[Math.floor(xs.length/2)] ?? 0;
+  const median = (xs: number[]) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? 0;
   const medianSize = prSizes.length ? median(prSizes) : 0;
-  const throughput = mergedPRs.length / Math.max(1, medianSize ? Math.log10(medianSize+10) : 1);
+  const throughput = mergedPRs.length / Math.max(1, medianSize ? Math.log10(medianSize + 10) : 1);
 
   const attributes: Record<string, number> = {};
 
-// 1) Code Quality (simple proxy by PR size — smaller tends to be better)
-attributes["Code Quality"] = mapTo20(clamp01(1 - mean(prSizes)/5000));
+  // 1) Code Quality (simple proxy by PR size — smaller tends to be better)
+  attributes["Code Quality"] = mapTo20(clamp01(1 - mean(prSizes) / 5000));
 
-// 2) Test Discipline (% merged PRs that touch tests)
-attributes["Test Discipline"] = mapTo20(testRatio);
+  // 2) Test Discipline (% merged PRs that touch tests)
+  attributes["Test Discipline"] = mapTo20(testRatio);
 
-// 3) Responsiveness (faster first interaction on PR is better)
-attributes["Responsiveness"] = mapTo20(respScore);
+  // 3) Responsiveness (faster first interaction on PR is better)
+  attributes["Responsiveness"] = mapTo20(respScore);
 
-// 4) Throughput (log-scaled merged PR count)
-attributes["Throughput"] = mapTo20(clamp01(Math.log10(1 + mergedPRs.length) / Math.log10(21)));
+  // 4) Throughput (log-scaled merged PR count)
+  attributes["Throughput"] = mapTo20(clamp01(Math.log10(1 + mergedPRs.length) / Math.log10(21)));
 
-// 5) Review Quality (reviews authored on others' PRs; log-scaled)
-const reviewCount = reviewsAuthored.length;
-const review01 = Math.log10(1 + reviewCount) / Math.log10(11);
-attributes["Review Quality"] = mapTo20(review01);
+  // 5) Review Quality (reviews authored on others' PRs; log-scaled)
+  const reviewCount = reviewsAuthored.length;
+  const review01 = Math.log10(1 + reviewCount) / Math.log10(11);
+  attributes["Review Quality"] = mapTo20(review01);
 
-// 6) Documentation Quality (ratio of merged PRs touching docs/ or *.md)
-const docPRs = mergedPRs.filter(p => p.files.nodes.some(f => /\.md$|^docs\//i.test(f.path)));
-const docRatio = mergedPRs.length ? docPRs.length / mergedPRs.length : 0;
-attributes["Documentation Quality"] = mapTo20(docRatio);
+  // 6) Documentation Quality (ratio of merged PRs touching docs/ or *.md)
+  const docPRs = mergedPRs.filter(p => p.files.nodes.some(f => /\.md$|^docs\//i.test(f.path)));
+  const docRatio = mergedPRs.length ? docPRs.length / mergedPRs.length : 0;
+  attributes["Documentation Quality"] = mapTo20(docRatio);
 
-const overall = mapTo20(mean(Object.values(attributes).map(v => v/20)));(mean(Object.values(attributes).map(v => v/20)));
+  const overall = mapTo20(mean(Object.values(attributes).map(v => v / 20))); (mean(Object.values(attributes).map(v => v / 20)));
   return { attributes, overall };
 }
 
@@ -223,7 +225,7 @@ const overall = mapTo20(mean(Object.values(attributes).map(v => v/20)));(mean(Ob
       since: data.sinceISO,
       overall,
       attributes,
-      counts: { prs: data.prs.length, merged: data.prs.filter(p=>p.mergedAt).length, reviews_authored: data.reviewsAuthored.length },
+      counts: { prs: data.prs.length, merged: data.prs.filter(p => p.mergedAt).length, reviews_authored: data.reviewsAuthored.length },
     };
     if (AS_JSON) console.log(JSON.stringify(output, null, 2));
     else {
