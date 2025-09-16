@@ -12,34 +12,34 @@
     "codegen": "graphql-codegen"
   },
   "dependencies": {
-    "@apollo/client": "^3.11.0",
-    "@nuxt/eslint": "1.8.0",
+    "@apollo/client": "^4.0.5",
+    "@nuxt/eslint": "1.9.0",
     "@nuxt/image": "1.11.0",
-    "@nuxt/ui": "3.3.2",
+    "@nuxt/ui": "3.3.4",
     "@octokit/core": "^7.0.3",
     "@octokit/graphql": "^9.0.1",
     "@octokit/graphql-schema": "^15.26.0",
     "@vue/apollo-composable": "^4.0.0",
-    "@vueuse/core": "^13.6.0",
+    "@vueuse/core": "^13.9.0",
     "chart.js": "^4.5.0",
-    "eslint": "^9.33.0",
+    "eslint": "^9.35.0",
     "graphql": "^16.8.0",
-    "nuxt": "^4.0.1",
-    "tailwindcss": "^4.1.12",
+    "nuxt": "^4.1.2",
+    "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
-    "vue": "^3.5.18",
+    "vue": "^3.5.21",
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1",
     "yaml": "^2.8.1",
-    "zod": "^4.0.17"
+    "zod": "^4.1.8"
   },
   "packageManager": "pnpm@10.14.0+sha256.297534e65d5842450539c1e8022c8831ab5e1fe2eb74664787a815519542d620",
   "devDependencies": {
-    "@graphql-codegen/cli": "^5.0.2",
-    "@graphql-codegen/typed-document-node": "^5.0.1",
-    "@graphql-codegen/typescript": "^4.0.1",
-    "@graphql-codegen/typescript-operations": "^4.0.1",
+    "@graphql-codegen/cli": "^6.0.0",
+    "@graphql-codegen/typed-document-node": "^6.0.0",
+    "@graphql-codegen/typescript": "^5.0.0",
+    "@graphql-codegen/typescript-operations": "^5.0.0",
     "unplugin-vue-router": "^0.15.0",
-    "vue-tsc": "^3.0.5"
+    "vue-tsc": "^3.0.7"
   }
 }
