@@ -8,6 +8,7 @@ const contributionsQuery = graphql(/* GraphQL */ `
     search(query: $q, type: ISSUE, first: 50) {
       nodes {
         ... on PullRequest {
+          __typename
           title
           url
           number
