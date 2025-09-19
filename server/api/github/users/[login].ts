@@ -2,11 +2,14 @@ import { getRouterParam } from "h3";
 import { defineCachedEventHandler } from "nitropack/runtime";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
-import type { ResultOf } from "@graphql-typed-document-node/core";
+import { db } from "~~/database/client";
+import { developper } from "~~/database/schemas";
+import { nanoid } from "nanoid";
 
-const query = graphql(/* GraphQL */ `
+const userQuery = graphql(/* GraphQL */ `
   query GetUserInfo($login: String!) {
     user(login: $login) {
+      id
       login
       followers {
         totalCount
@@ -51,55 +54,99 @@ const query = graphql(/* GraphQL */ `
   }
 `);
 
+const pullRequestQuery = graphql(/* GraphQL */ `
+  query MergedPROwnVsExternalTwoYearsTop100(
+    $ownQuery: String!
+    $extQuery: String!
+    $first: Int = 100
+    $ownAfter: String
+    $extAfter: String
+  ) {
+    own: search(query: $ownQuery, type: ISSUE, first: $first, after: $ownAfter) {
+      nodes {
+        ... on PullRequest {
+          title
+          url
+          mergedAt
+          repository {
+            nameWithOwner
+            stargazerCount
+          }
+        }
+      }
+    }
+
+    external: search(query: $extQuery, type: ISSUE, first: $first, after: $extAfter) {
+      issueCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ... on PullRequest {
+          title
+          url
+          mergedAt
+          repository {
+            nameWithOwner
+            stargazerCount
+          }
+        }
+      }
+    }
+  }
+`);
+
 export default defineCachedEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
   if (!login) {
     return { error: "Missing login" };
   }
 
-  let data:
-    | {
-      login: string;
-      followers: number;
-      following: number;
-      public_repos: number;
-      public_gists: number;
-      created_at: string;
-      bio: string | null | undefined;
-    }
-    | undefined;
-  let repoNodes: Array<{
-    stargazerCount: number;
-    forkCount: number;
-    primaryLanguage?: { name: string } | null | undefined;
-  }> = [];
-  let userData: ResultOf<typeof query>["user"];
-  try {
-    const { user } = await getGithubClient().call(query, { login });
+  const { user } = await getGithubClient().call(userQuery, { login });
 
-    if (!user) {
-      return { error: "User not found" };
-    }
+  if (!user) {
+    return { error: "User not found" };
+  }
 
-    userData = user;
-
-    data = {
-      login: user.login,
-      followers: user.followers.totalCount,
-      following: user.following.totalCount,
-      public_repos: user.repositories.totalCount,
-      public_gists: user.gists.totalCount,
-      created_at: user.createdAt,
+  db
+    .insert(developper)
+    .values({
+      id: nanoid(),
+      githubId: user.id,
+      username: user.login,
       bio: user.bio,
-    };
-    repoNodes = (user.repositories.nodes ?? []).filter(
-      (n): n is NonNullable<typeof n> => n !== null,
-    );
-  }
-  catch (error) {
-    console.error("GitHub GraphQL error:", error);
-    return { error: "GitHub API error" };
-  }
+      avatarUrl: "",
+    })
+    .onConflictDoUpdate({
+      target: developper.githubId,
+      set: {
+        username: user.login,
+        bio: user.bio,
+      },
+    })
+    .execute();
+
+  console.log(await db.query.developper.findFirst({
+    where(fields, operators) {
+      return operators.eq(fields.githubId, user.id);
+    },
+  }));
+
+
+  const data = {
+    login: user.login,
+    followers: user.followers.totalCount,
+    following: user.following.totalCount,
+    public_repos: user.repositories.totalCount,
+    public_gists: user.gists.totalCount,
+    created_at: user.createdAt,
+    bio: user.bio,
+  };
+
+  const repoNodes = (user.repositories.nodes ?? []).filter(
+    (n): n is NonNullable<typeof n> => n !== null,
+  );
 
   if (!data) {
     return { error: "Unexpected error" };
@@ -118,7 +165,7 @@ export default defineCachedEventHandler(async (event) => {
     .slice(0, 3)
     .map(([lang]) => lang);
 
-  const orgContributedRepos = (userData.repositoriesContributedTo.nodes ?? [])
+  const orgContributedRepos = (user.repositoriesContributedTo.nodes ?? [])
     .filter((n): n is NonNullable<typeof n> => !!n && n.owner.__typename === "Organization")
     .map(repo => ({
       nameWithOwner: repo.nameWithOwner,
@@ -188,8 +235,27 @@ export default defineCachedEventHandler(async (event) => {
   if (qualityScore > 65) pros.push("Solid code quality indicators");
   else cons.push("Code quality signals need improvement");
 
+  const now = new Date();
+  const twoYearsAgo = new Date();
+  twoYearsAgo.setFullYear(now.getFullYear() - 2);
+
+  const from = twoYearsAgo.toISOString().split("T")[0]; // e.g. "2023-09-19"
+  const to = now.toISOString().split("T")[0]; // e.g. "2025-09-19"
+
+  // Tri par "updated" + seulement PR mergées sur 2 ans
+  const ownQuery = `is:pr is:merged author:${login} user:${login} merged:${from}..${to} sort:updated-desc`;
+  const extQuery = `is:pr is:merged author:${login} -user:${login} merged:${from}..${to} sort:updated-desc`;
+
+  const res = await getGithubClient().call(pullRequestQuery, {
+    ownQuery,
+    extQuery,
+    first: 100,
+    ownAfter: null,
+    extAfter: null,
+  });
+
   return {
-    debug: userData,
+    debug: res,
     login: data.login,
     followers: data.followers,
     following: data.following,

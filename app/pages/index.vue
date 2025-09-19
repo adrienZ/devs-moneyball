@@ -200,7 +200,7 @@ const pageSize = ref(20);
 const totalPages = ref(1);
 
 const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
-const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.region_name);
+const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.country);
 
 const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
   query: {
@@ -223,10 +223,10 @@ const users = computed(() => paginated.value?.users ?? []);
 totalPages.value = paginated.value?.totalPages ?? 1;
 
 watch(userConfig, (newConfig) => {
-  if (newConfig?.region_name) {
+  if (newConfig?.country) {
     const location: LocationSuggestion = {
-      name: newConfig.region_name,
-      label: newConfig.region_name,
+      name: newConfig.country,
+      label: newConfig.country,
       country: newConfig.country,
       city: newConfig.city,
       state: newConfig.region_name,

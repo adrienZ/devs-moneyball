@@ -1,0 +1,1 @@
+ALTER TABLE "developper" ALTER COLUMN "githubId" SET DATA TYPE text;

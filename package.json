@@ -9,17 +9,22 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "codegen": "graphql-codegen --config ./codegen-config.ts"
+    "codegen": "graphql-codegen --config ./codegen-config.ts",
+    "db:generate": "npx drizzle-kit generate",
+    "db:migrate": "npx drizzle-kit migrate"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.8",
     "@nuxt/eslint": "1.9.0",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "3.3.4",
     "@octokit/graphql": "^9.0.1",
     "@vueuse/core": "^13.9.0",
     "chart.js": "^4.5.0",
+    "drizzle-orm": "^0.44.5",
     "eslint": "^9.35.0",
     "graphql": "^16.8.0",
+    "nanoid": "^5.1.5",
     "nuxt": "^4.1.2",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
@@ -34,7 +39,10 @@
     "@0no-co/graphqlsp": "^1.15.0",
     "@graphql-codegen/cli": "6.0.0",
     "@graphql-typed-document-node/core": "^3.2.0",
+    "@nuxt/devtools-kit": "^2.6.4",
     "@octokit/graphql-schema": "^15.26.0",
+    "@types/node": "^24.5.2",
+    "drizzle-kit": "^0.31.4",
     "unplugin-vue-router": "^0.15.0",
     "vue-tsc": "^3.0.7"
   }
