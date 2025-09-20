@@ -1,14 +1,14 @@
-import { getRouterParam } from "h3";
-import { defineCachedEventHandler } from "nitropack/runtime";
+import { getRouterParam, createError, defineEventHandler } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
-import { db } from "~~/database/client";
+import { useDrizzle } from "~~/database/client";
 import { developper } from "~~/database/schemas";
 import { nanoid } from "nanoid";
 
 const userQuery = graphql(/* GraphQL */ `
   query GetUserInfo($login: String!) {
     user(login: $login) {
+      __typename
       id
       login
       followers {
@@ -54,102 +54,59 @@ const userQuery = graphql(/* GraphQL */ `
   }
 `);
 
-const pullRequestQuery = graphql(/* GraphQL */ `
-  query MergedPROwnVsExternalTwoYearsTop100(
-    $ownQuery: String!
-    $extQuery: String!
-    $first: Int = 100
-    $ownAfter: String
-    $extAfter: String
-  ) {
-    own: search(query: $ownQuery, type: ISSUE, first: $first, after: $ownAfter) {
-      nodes {
-        ... on PullRequest {
-          title
-          url
-          mergedAt
-          repository {
-            nameWithOwner
-            stargazerCount
-          }
-        }
-      }
-    }
-
-    external: search(query: $extQuery, type: ISSUE, first: $first, after: $extAfter) {
-      issueCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        ... on PullRequest {
-          title
-          url
-          mergedAt
-          repository {
-            nameWithOwner
-            stargazerCount
-          }
-        }
-      }
-    }
-  }
-`);
-
-export default defineCachedEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
   if (!login) {
-    return { error: "Missing login" };
+    throw createError("missing login");
   }
 
-  const { user } = await getGithubClient().call(userQuery, { login });
+  const { user: githubUser } = await getGithubClient().call(userQuery, { login });
 
-  if (!user) {
-    return { error: "User not found" };
+  if (!githubUser) {
+    throw createError("user not found");
   }
 
-  db
+  const db = useDrizzle();
+  const developer = await db
     .insert(developper)
     .values({
       id: nanoid(),
-      githubId: user.id,
-      username: user.login,
-      bio: user.bio,
+      githubId: githubUser.id,
+      username: githubUser.login,
+      bio: githubUser.bio,
       avatarUrl: "",
     })
     .onConflictDoUpdate({
       target: developper.githubId,
       set: {
-        username: user.login,
-        bio: user.bio,
+        username: githubUser.login,
+        bio: githubUser.bio,
       },
     })
-    .execute();
+    .returning()
+    .execute()
+    .then(rows => rows.at(0));
 
-  console.log(await db.query.developper.findFirst({
-    where(fields, operators) {
-      return operators.eq(fields.githubId, user.id);
-    },
-  }));
-
+  if (!developer) {
+    throw createError("Failed to create or update developer");
+  }
 
   const data = {
-    login: user.login,
-    followers: user.followers.totalCount,
-    following: user.following.totalCount,
-    public_repos: user.repositories.totalCount,
-    public_gists: user.gists.totalCount,
-    created_at: user.createdAt,
-    bio: user.bio,
+    login: githubUser.login,
+    followers: githubUser.followers.totalCount,
+    following: githubUser.following.totalCount,
+    public_repos: githubUser.repositories.totalCount,
+    public_gists: githubUser.gists.totalCount,
+    created_at: githubUser.createdAt,
+    bio: githubUser.bio,
   };
 
-  const repoNodes = (user.repositories.nodes ?? []).filter(
+  const repoNodes = (githubUser.repositories.nodes ?? []).filter(
     (n): n is NonNullable<typeof n> => n !== null,
   );
 
   if (!data) {
-    return { error: "Unexpected error" };
+    throw createError("Unexpected error");
   }
 
   const totalStars = repoNodes.reduce((sum, r) => sum + r.stargazerCount, 0);
@@ -165,7 +122,7 @@ export default defineCachedEventHandler(async (event) => {
     .slice(0, 3)
     .map(([lang]) => lang);
 
-  const orgContributedRepos = (user.repositoriesContributedTo.nodes ?? [])
+  const orgContributedRepos = (githubUser.repositoriesContributedTo.nodes ?? [])
     .filter((n): n is NonNullable<typeof n> => !!n && n.owner.__typename === "Organization")
     .map(repo => ({
       nameWithOwner: repo.nameWithOwner,
@@ -235,33 +192,19 @@ export default defineCachedEventHandler(async (event) => {
   if (qualityScore > 65) pros.push("Solid code quality indicators");
   else cons.push("Code quality signals need improvement");
 
-  const now = new Date();
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(now.getFullYear() - 2);
-
-  const from = twoYearsAgo.toISOString().split("T")[0]; // e.g. "2023-09-19"
-  const to = now.toISOString().split("T")[0]; // e.g. "2025-09-19"
-
-  // Tri par "updated" + seulement PR mergées sur 2 ans
-  const ownQuery = `is:pr is:merged author:${login} user:${login} merged:${from}..${to} sort:updated-desc`;
-  const extQuery = `is:pr is:merged author:${login} -user:${login} merged:${from}..${to} sort:updated-desc`;
-
-  const res = await getGithubClient().call(pullRequestQuery, {
-    ownQuery,
-    extQuery,
-    first: 100,
-    ownAfter: null,
-    extAfter: null,
+  const ratings = await db.query.devActivity.findFirst({
+    where: (activity, { eq }) => eq(activity.devId, developer.id),
   });
 
   return {
-    debug: res,
+    ratings,
+    id: developer.id,
     login: data.login,
     followers: data.followers,
     following: data.following,
     public_repos: data.public_repos,
     public_gists: data.public_gists,
-    created_at: data.created_at,
+    created_at: String(data.created_at),
     bio: data.bio,
     totalStars,
     totalForks,
@@ -281,6 +224,4 @@ export default defineCachedEventHandler(async (event) => {
     pros,
     cons,
   };
-}, {
-  maxAge: 60 * 60, // 1 hour
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAsyncData } from "nuxt/app";
+import { useAsyncData, useFetch } from "nuxt/app";
 import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
@@ -20,63 +20,12 @@ interface PullRequestItem {
   };
 }
 
-interface UserMetrics {
-  debug: {
-    login: string;
-    followers: { totalCount: number };
-    following: { totalCount: number };
-    repositories: {
-      totalCount: number;
-      nodes: Array<{
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-      } | null> | null;
-    };
-    repositoriesContributedTo: {
-      totalCount: number;
-      nodes: Array<{
-        nameWithOwner: string;
-        url: string;
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-        owner: {
-          __typename: string;
-          login: string;
-          name?: string | null;
-        };
-      } | null> | null;
-    };
-    gists: { totalCount: number };
-    createdAt: string;
-    bio: string | null;
-  };
-  login: string;
-  followers: number;
-  following: number;
-  public_repos: number;
-  public_gists: number;
-  created_at: string;
-  totalStars: number;
-  totalForks: number;
-  avgStarsPerRepo: number;
-  topLanguages: string[];
-  devScore: number;
-  letter: string;
-  summary: string;
-  bio?: string | null;
-  criteria: Record<string, number>;
-  pros: string[];
-  cons: string[];
-}
-
 const route = useRoute();
 const githubId = (route.params as { githubId: string }).githubId;
 
 const { data: user, pending: loading, error } = useAsyncData(
   "user-metrics",
-  () => $fetch<UserMetrics>(`/api/github/users/${githubId}`),
+  () => $fetch(`/api/github/users/${githubId}`),
 );
 
 const { data: contributions } = useAsyncData(
@@ -157,13 +106,20 @@ const tabsItems = shallowRef<TabsItem[]>([
     icon: "i-lucide-history",
     slot: "history" as const,
   },
+]);
+
+const askRatingBody = computed(() => ({
+  userId: user.value?.id,
+}));
+const askRatingQuery = useFetch(
+  `/api/rating`,
   {
-    label: "Debug",
-    icon: "i-lucide-lock",
-    slot: "debug" as const,
+    method: "POST",
+    body: askRatingBody,
+    immediate: false,
 
   },
-]);
+);
 </script>
 
 <template>
@@ -233,6 +189,28 @@ const tabsItems = shallowRef<TabsItem[]>([
       class="w-full gap-0 my-6"
     >
       <template #overview>
+        <UCard class="my-6">
+          <template #header>
+            <h2 class="text-xl font-bold">
+              Ratings
+            </h2>
+          </template>
+          <pre v-if="askRatingQuery.data.value">{{ askRatingQuery.data.value }}</pre>
+          <pre v-else-if="user.ratings">{{ user.ratings }}</pre>
+          <div v-else>
+            <p class="text-warning-400">
+              no ratings yet
+            </p>
+            <UButton
+              :loading="askRatingQuery.status.value === 'pending'"
+              color="primary"
+              @click="askRatingQuery.execute()"
+            >
+              Ask for rating
+            </UButton>
+          </div>
+        </UCard>
+
         <div
           class="my-6 grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
         >
@@ -379,10 +357,6 @@ const tabsItems = shallowRef<TabsItem[]>([
             <span class="text-sm">{{ row.original.repository.stars }}</span>
           </template>
         </UTable>
-      </template>
-
-      <template #debug>
-        <pre>{{ user.debug }}</pre>
       </template>
     </UTabs>
   </UContainer>

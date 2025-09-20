@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { date, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 const defaultDatesColumns = {
   createdAt: timestamp({ mode: "string" })
@@ -16,3 +16,15 @@ export const developper = pgTable("developper", {
   bio: text(),
   ...defaultDatesColumns,
 });
+
+export const devActivity = pgTable("dev_activity", {
+  devId: text("dev_id").notNull(),
+  period: text("period").notNull(), // 'daily' | 'weekly' | 'yearly'
+  periodStart: date("period_start").notNull(), // 'YYYY-MM-DD'
+  prMergedRaw: integer("pr_merged_raw").notNull(),
+  prMergedCapped: integer("pr_merged_capped").notNull(),
+  capApplied: integer("cap_applied").notNull(),
+  ...defaultDatesColumns,
+}, t => ({
+  pk: primaryKey({ columns: [t.devId, t.period, t.periodStart] }),
+}));

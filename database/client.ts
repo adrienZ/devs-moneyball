@@ -8,4 +8,8 @@ const dbFilesysPath = path.resolve(__dirname, "../../.data/pglite");
 
 const client = new PGlite(dbFilesysPath);
 
-export const db = drizzle({ client, schema, logger: import.meta.dev });
+const db = drizzle({ client, schema, logger: import.meta.dev, });
+
+export function useDrizzle() {
+  return db;
+};
