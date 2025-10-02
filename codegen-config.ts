@@ -11,7 +11,7 @@ const config: CodegenConfig = {
       preset: "client",
       plugins: [],
 
-      // not sure what it does
+      // https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#config-api
       config: {
         useTypeImports: true,
         immutableTypes: true,
