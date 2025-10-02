@@ -1,7 +1,6 @@
 import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
-import type { ResultOf } from "@graphql-typed-document-node/core";
 
 const query = graphql(/* GraphQL */ `
   query GetUserInfo($login: String!) {
