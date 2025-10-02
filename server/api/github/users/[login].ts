@@ -1,11 +1,16 @@
 import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
+import { useDrizzle } from "~~/database/client";
+import { developper } from "~~/database/schema";
+import { nanoid } from "nanoid";
 
 const query = graphql(/* GraphQL */ `
   query GetUserInfo($login: String!) {
     user(login: $login) {
       login
+      id
+      avatarUrl
       followers {
         totalCount
       }
@@ -69,6 +74,32 @@ export default defineEventHandler(async (event) => {
     created_at: githubUser.createdAt,
     bio: githubUser.bio,
   };
+
+  const db = useDrizzle();
+  const developer = await db
+    .insert(developper)
+    .values({
+      id: nanoid(),
+      githubId: githubUser.id,
+      username: githubUser.login,
+      bio: githubUser.bio,
+      avatarUrl: githubUser.avatarUrl,
+    })
+    .onConflictDoUpdate({
+      target: developper.githubId,
+      set: {
+        username: githubUser.login,
+        bio: githubUser.bio,
+        avatarUrl: githubUser.avatarUrl,
+      },
+    })
+    .returning()
+    .execute()
+    .then(rows => rows.at(0));
+
+  if (!developer) {
+    throw createError("Failed to create or update developer");
+  }
 
   const repoNodes = (githubUser.repositories.nodes ?? []).filter(
     (n): n is NonNullable<typeof n> => n !== null,
