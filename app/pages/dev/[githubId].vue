@@ -188,6 +188,7 @@ const tabsItems = shallowRef<TabsItem[]>([
 
   },
 ]);
+console.log("pullRequests", pullRequests.value);
 </script>
 
 <template>
