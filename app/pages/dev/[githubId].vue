@@ -130,12 +130,6 @@ const tabsItems = shallowRef<TabsItem[]>([
     icon: "i-lucide-history",
     slot: "history" as const,
   },
-  {
-    label: "Debug",
-    icon: "i-lucide-lock",
-    slot: "debug" as const,
-
-  },
 ]);
 </script>
 
@@ -359,10 +353,6 @@ const tabsItems = shallowRef<TabsItem[]>([
             <span class="text-sm">{{ row.original.repository.stars }}</span>
           </template>
         </UTable>
-      </template>
-
-      <template #debug>
-        <pre>{{ user.debug }}</pre>
       </template>
     </UTabs>
   </UContainer>

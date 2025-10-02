@@ -189,7 +189,6 @@ export default defineEventHandler(async (event) => {
   else cons.push("Code quality signals need improvement");
 
   return {
-    debug: data,
     login: data.login,
     followers: data.followers,
     following: data.following,
