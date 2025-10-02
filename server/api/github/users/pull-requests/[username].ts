@@ -36,8 +36,5 @@ export default defineEventHandler(async (event) => {
   }
 
   const { user } = await getGithubClient().call(pullRequestsQuery, { username });
-
-  console.log("username", username);
-
   return user;
 });
