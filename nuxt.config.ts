@@ -32,6 +32,10 @@ export default defineNuxtConfig({
         driver: "null", // no-cache
       },
     },
+    scheduledTasks: {
+      // every year on Dec 31st at midnight
+      "0 0 31 12 *": ["db:cohort"],
+    },
   },
   typescript: {
     typeCheck: true,
