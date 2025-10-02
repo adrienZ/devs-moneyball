@@ -1,3 +1,4 @@
+import type { ResultOf } from "@graphql-typed-document-node/core";
 import { defineEventHandler, getQuery } from "h3";
 import { z } from "zod";
 import { graphql } from "~~/codegen";
@@ -9,6 +10,7 @@ query PopularUsers($q: String!, $pageSize: Int!) {
     userCount
     nodes {
       ... on User {
+        __typename
         login
         name
         location
@@ -20,14 +22,6 @@ query PopularUsers($q: String!, $pageSize: Int!) {
     }
   }
 }`);
-
-interface User {
-  login: string;
-  name: string | null;
-  followers: { totalCount: number };
-  createdAt: string;
-  location?: string | null;
-}
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
 
@@ -90,6 +84,8 @@ export default defineEventHandler(async (event) => {
     pageSize,
   });
 
+  type Nodes = NonNullable<ResultOf<typeof popularUsersQuery>["search"]["nodes"]>;
+  type User = Extract<Nodes[number], { __typename: "User" }>;
   const users = data.search.nodes?.filter((u): u is User => !!u);
 
   // Pagination logic: only needed for skipping pages (not supported by GitHub search API)

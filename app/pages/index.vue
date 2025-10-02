@@ -129,14 +129,6 @@ function useLanguageSearch() {
   };
 }
 
-interface User {
-  login: string;
-  followers: { totalCount: number };
-  name: string | null;
-  createdAt: string;
-  location?: string | null;
-}
-
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
 const getAge = (createdAt: string) => (Date.now() - new Date(createdAt).getTime()) / MS_IN_YEAR;
 
