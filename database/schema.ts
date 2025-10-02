@@ -13,20 +13,20 @@ import { randomUUID } from "node:crypto";
 
 // No withTimezone, keep mode:"string" so we read/write ISO strings cleanly in pglite
 const defaultDateColumns = {
-  createdAt: timestamp("created_at", { mode: "string" })
+  createdAt: timestamp({ mode: "string" })
     .$defaultFn(() => new Date().toISOString())
     .notNull(),
-  updatedAt: timestamp("updated_at", { mode: "string" }),
-  deletedAt: timestamp("deleted_at", { mode: "string" }),
+  updatedAt: timestamp({ mode: "string" }),
+  deletedAt: timestamp({ mode: "string" }),
 };
 
 export const snapshots = pgTable(
   "cohorts_snapshots",
   {
-    id: uuid("id")
+    id: uuid()
       .$defaultFn(() => randomUUID())
       .primaryKey(),
-    count: integer("count").notNull(),
+    count: integer().notNull(),
     ...defaultDateColumns,
   },
 );
@@ -34,12 +34,12 @@ export const snapshots = pgTable(
 export const snapshotNames = pgTable(
   "cohorts_snapshot_names",
   {
-    id: serial("id").primaryKey(),
-    snapshotId: uuid("snapshot_id")
+    id: serial().primaryKey(),
+    snapshotId: uuid()
       .notNull()
       .references(() => snapshots.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    position: integer("position").notNull(), // 0-based index on the page
+    name: text().notNull(),
+    position: integer().notNull(), // 0-based index on the page
     ...defaultDateColumns,
   },
   t => ({
@@ -61,3 +61,12 @@ export const snapshotNamesRelations = relations(snapshotNames, ({ one }) => ({
     references: [snapshots.id],
   }),
 }));
+
+export const developper = pgTable("developper", {
+  id: text().primaryKey(),
+  username: text().notNull(),
+  githubId: text().notNull().unique(),
+  avatarUrl: text().notNull(),
+  bio: text(),
+  ...defaultDateColumns,
+});
