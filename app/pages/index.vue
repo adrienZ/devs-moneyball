@@ -219,7 +219,7 @@ const { data: paginated, pending: loading, error } = await useAsyncData("list", 
   watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, page, pageSize],
 });
 
-const users = computed(() => paginated.value?.users ?? []);
+const users = computed(() => (paginated.value?.users ?? []) as User[]);
 totalPages.value = paginated.value?.totalPages ?? 1;
 
 watch(userConfig, (newConfig) => {
@@ -260,7 +260,7 @@ function getHeader(column: Parameters<TableColumn<User>["header"]>["0"]["column"
   });
 }
 
-const columns: TableColumn<User>[] = [
+const columns = [
   {
     accessorKey: "login",
     header: ({ column }) => getHeader(column, "User"),
@@ -297,7 +297,7 @@ const columns: TableColumn<User>[] = [
     cell: ({ row }) => `${Math.floor(getAge(row.original.createdAt))} years`,
     enableSorting: true,
   },
-];
+] satisfies TableColumn<User>[];
 
 const sorting = ref([]);
 </script>
