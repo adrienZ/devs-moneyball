@@ -1,6 +1,4 @@
-// import { defineEventHandler } from 'h3';
-import { defineCachedEventHandler } from "nitropack/runtime";
-import { getQuery } from "h3";
+import { defineEventHandler, getQuery } from "h3";
 import { z } from "zod";
 import { graphql } from "~~/codegen";
 import { getGithubClient } from "~~/server/githubClient";
@@ -46,7 +44,7 @@ const querySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(50).default(20),
 });
 
-export default defineCachedEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const params = querySchema.parse(getQuery(event));
   const now = Date.now();
 
@@ -107,9 +105,4 @@ export default defineCachedEventHandler(async (event) => {
     pageSize,
     totalPages: Math.ceil(total / pageSize),
   };
-}, {
-  maxAge: 60 * 60, // Cache for 1 hour,
-  getKey() {
-    return Date.now().toString(); // Use current timestamp as cache key
-  },
 });

@@ -1,5 +1,4 @@
-import { getRouterParam } from "h3";
-import { defineCachedEventHandler } from "nitropack/runtime";
+import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
 import type { ResultOf } from "@graphql-typed-document-node/core";
@@ -51,59 +50,30 @@ const query = graphql(/* GraphQL */ `
   }
 `);
 
-export default defineCachedEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
   if (!login) {
-    return { error: "Missing login" };
+    throw createError("Missing login");
   }
 
-  let data:
-    | {
-      login: string;
-      followers: number;
-      following: number;
-      public_repos: number;
-      public_gists: number;
-      created_at: string;
-      bio: string | null | undefined;
-    }
-    | undefined;
-  let repoNodes: Array<{
-    stargazerCount: number;
-    forkCount: number;
-    primaryLanguage?: { name: string } | null | undefined;
-  }> = [];
-  let userData: ResultOf<typeof query>["user"];
-  try {
-    const { user } = await getGithubClient().call(query, { login });
-
-    if (!user) {
-      return { error: "User not found" };
-    }
-
-    userData = user;
-
-    data = {
-      login: user.login,
-      followers: user.followers.totalCount,
-      following: user.following.totalCount,
-      public_repos: user.repositories.totalCount,
-      public_gists: user.gists.totalCount,
-      created_at: user.createdAt,
-      bio: user.bio,
-    };
-    repoNodes = (user.repositories.nodes ?? []).filter(
-      (n): n is NonNullable<typeof n> => n !== null,
-    );
-  }
-  catch (error) {
-    console.error("GitHub GraphQL error:", error);
-    return { error: "GitHub API error" };
+  const { user: githubUser } = await getGithubClient().call(query, { login });
+  if (!githubUser) {
+    throw createError("user not found");
   }
 
-  if (!data) {
-    return { error: "Unexpected error" };
-  }
+  const data = {
+    login: githubUser.login,
+    followers: githubUser.followers.totalCount,
+    following: githubUser.following.totalCount,
+    public_repos: githubUser.repositories.totalCount,
+    public_gists: githubUser.gists.totalCount,
+    created_at: githubUser.createdAt,
+    bio: githubUser.bio,
+  };
+
+  const repoNodes = (githubUser.repositories.nodes ?? []).filter(
+    (n): n is NonNullable<typeof n> => n !== null,
+  );
 
   const totalStars = repoNodes.reduce((sum, r) => sum + r.stargazerCount, 0);
   const totalForks = repoNodes.reduce((sum, r) => sum + r.forkCount, 0);
@@ -118,7 +88,7 @@ export default defineCachedEventHandler(async (event) => {
     .slice(0, 3)
     .map(([lang]) => lang);
 
-  const orgContributedRepos = (userData.repositoriesContributedTo.nodes ?? [])
+  const orgContributedRepos = (githubUser.repositoriesContributedTo.nodes ?? [])
     .filter((n): n is NonNullable<typeof n> => !!n && n.owner.__typename === "Organization")
     .map(repo => ({
       nameWithOwner: repo.nameWithOwner,
@@ -189,13 +159,13 @@ export default defineCachedEventHandler(async (event) => {
   else cons.push("Code quality signals need improvement");
 
   return {
-    debug: userData,
+    debug: data,
     login: data.login,
     followers: data.followers,
     following: data.following,
     public_repos: data.public_repos,
     public_gists: data.public_gists,
-    created_at: data.created_at,
+    created_at: String(data.created_at),
     bio: data.bio,
     totalStars,
     totalForks,
@@ -215,6 +185,4 @@ export default defineCachedEventHandler(async (event) => {
     pros,
     cons,
   };
-}, {
-  maxAge: 60 * 60, // 1 hour
 });

@@ -33,63 +33,12 @@ interface PullRequestsStats {
   openPullRequests: { totalCount: number };
 }
 
-interface UserMetrics {
-  debug: {
-    login: string;
-    followers: { totalCount: number };
-    following: { totalCount: number };
-    repositories: {
-      totalCount: number;
-      nodes: Array<{
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-      } | null> | null;
-    };
-    repositoriesContributedTo: {
-      totalCount: number;
-      nodes: Array<{
-        nameWithOwner: string;
-        url: string;
-        stargazerCount: number;
-        forkCount: number;
-        primaryLanguage: { name: string } | null;
-        owner: {
-          __typename: string;
-          login: string;
-          name?: string | null;
-        };
-      } | null> | null;
-    };
-    gists: { totalCount: number };
-    createdAt: string;
-    bio: string | null;
-  };
-  login: string;
-  followers: number;
-  following: number;
-  public_repos: number;
-  public_gists: number;
-  created_at: string;
-  totalStars: number;
-  totalForks: number;
-  avgStarsPerRepo: number;
-  topLanguages: string[];
-  devScore: number;
-  letter: string;
-  summary: string;
-  bio?: string | null;
-  criteria: Record<string, number>;
-  pros: string[];
-  cons: string[];
-}
-
 const route = useRoute();
 const githubId = (route.params as { githubId: string }).githubId;
 
 const { data: user, pending: loading, error } = useAsyncData(
   "user-metrics",
-  () => $fetch<UserMetrics>(`/api/github/users/${githubId}`),
+  () => $fetch(`/api/github/users/${githubId}`),
 );
 
 const { data: contributions } = useAsyncData(
