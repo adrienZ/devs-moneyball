@@ -20,6 +20,19 @@ interface PullRequestItem {
   };
 }
 
+interface PullRequestsStats {
+  login: string;
+  name?: string | null;
+  contributionsCollection: {
+    totalPullRequestContributions: number;
+    totalPullRequestReviewContributions: number;
+  };
+  pullRequests: { totalCount: number };
+  mergedPullRequests: { totalCount: number };
+  closedPullRequests: { totalCount: number };
+  openPullRequests: { totalCount: number };
+}
+
 interface UserMetrics {
   debug: {
     login: string;
@@ -89,6 +102,16 @@ const { data: contributions } = useAsyncData(
   },
 );
 
+const { data: pullRequests } = useAsyncData<PullRequestsStats | null>(
+  "user-pull-requests",
+  () => $fetch<PullRequestsStats>(
+    `/api/github/users/pull-requests/${githubId}`,
+  ),
+  {
+    default: () => null,
+  },
+);
+
 const tableColumns: TableColumn<PullRequestItem>[] = [
   { id: "mergedAt", header: "Merged at" },
   { id: "repository", header: "Repository" },
@@ -111,17 +134,6 @@ const accountAge = computed(() => {
   return null;
 });
 
-// const formattedCreatedAt = computed(() => {
-//   if (user.value) {
-//     return new Date(user.value.created_at).toLocaleDateString(undefined, {
-//       year: 'numeric',
-//       month: 'long',
-//       day: 'numeric',
-//     })
-//   }
-//   return null
-// })
-
 const starsPerRepo = computed(() => {
   if (user.value) {
     return user.value.avgStarsPerRepo.toFixed(2);
@@ -143,6 +155,18 @@ const rows = computed(() => {
     metric: key,
     value,
   }));
+});
+
+const pullRequestsRows = computed(() => {
+  if (!pullRequests.value) return [] as Array<{ metric: string; value: number }>;
+  return [
+    { metric: "Total PRs", value: pullRequests.value.pullRequests.totalCount },
+    { metric: "Merged PRs", value: pullRequests.value.mergedPullRequests.totalCount },
+    { metric: "Open PRs", value: pullRequests.value.openPullRequests.totalCount },
+    { metric: "Closed PRs", value: pullRequests.value.closedPullRequests.totalCount },
+    { metric: "PR Contributions", value: pullRequests.value.contributionsCollection.totalPullRequestContributions },
+    { metric: "PR Reviews", value: pullRequests.value.contributionsCollection.totalPullRequestReviewContributions },
+  ];
 });
 
 const tabsItems = shallowRef<TabsItem[]>([
@@ -233,9 +257,7 @@ const tabsItems = shallowRef<TabsItem[]>([
       class="w-full gap-0 my-6"
     >
       <template #overview>
-        <div
-          class="my-6 grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
-        >
+        <div class="my-6 grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           <!-- LEFT PANEL -->
           <div class="lg:col-span-2 space-y-6">
             <!-- Overall rating -->
@@ -246,8 +268,7 @@ const tabsItems = shallowRef<TabsItem[]>([
               <div class="flex flex-col items-start">
                 <UTooltip :text="`${user?.devScore} / 100`">
                   <UBadge
-                    :color="
-                      user?.devScore >= 85 ? 'success'
+                    :color="user?.devScore >= 85 ? 'success'
                       : user?.devScore >= 70 ? 'warning'
                         : user?.devScore >= 50 ? 'secondary'
                           : 'error'
@@ -332,6 +353,16 @@ const tabsItems = shallowRef<TabsItem[]>([
                 </h3>
               </template>
               <UTable :data="rows" />
+            </UCard>
+
+            <!-- Pull Requests Stats Table -->
+            <UCard v-if="pullRequests">
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Pull Requests
+                </h3>
+              </template>
+              <UTable :data="pullRequestsRows" />
             </UCard>
           </div>
         </div>
