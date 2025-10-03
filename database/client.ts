@@ -11,7 +11,7 @@ let db: ReturnType<typeof drizzlePostgres>;
 
 if (DATABASE_URL) {
   // Production: use PostgreSQL
-  db = drizzlePostgres(postgres(DATABASE_URL, { prepare: false }), { schema });
+  db = drizzlePostgres(postgres(DATABASE_URL, { prepare: false, ssl: "require" }), { schema });
 }
 else {
   // Development: use PGlite
