@@ -3,18 +3,13 @@ import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import path from "node:path";
 import * as schema from "./schema";
-import { Pool } from "pg";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
 let db: ReturnType<typeof drizzlePostgres>;
 
 if (DATABASE_URL) {
-  const pool = new Pool({
-    connectionString: DATABASE_URL,
-  });
-
-  db = drizzlePostgres(pool, { schema });
+  db = drizzlePostgres(DATABASE_URL, { schema });
 }
 else {
   // Development: use PGlite
