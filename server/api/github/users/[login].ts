@@ -86,14 +86,7 @@ export default defineEventHandler(async (event) => {
         bio: githubUser.bio,
         avatarUrl: githubUser.avatarUrl,
       })
-      .onConflictDoUpdate({
-        target: developper.githubId,
-        set: {
-          username: githubUser.login,
-          bio: githubUser.bio,
-          avatarUrl: githubUser.avatarUrl,
-        },
-      })
+      .onConflictDoNothing()
       .returning()
       .execute()
       .then(rows => rows.at(0));
