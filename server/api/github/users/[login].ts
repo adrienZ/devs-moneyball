@@ -75,30 +75,38 @@ export default defineEventHandler(async (event) => {
     bio: githubUser.bio,
   };
 
-  const db = useDrizzle();
-  const developer = await db
-    .insert(developper)
-    .values({
-      id: nanoid(),
-      githubId: githubUser.id,
-      username: githubUser.login,
-      bio: githubUser.bio,
-      avatarUrl: githubUser.avatarUrl,
-    })
-    .onConflictDoUpdate({
-      target: developper.githubId,
-      set: {
+  try {
+    const db = useDrizzle();
+    await db
+      .insert(developper)
+      .values({
+        id: nanoid(),
+        githubId: githubUser.id,
         username: githubUser.login,
         bio: githubUser.bio,
         avatarUrl: githubUser.avatarUrl,
-      },
-    })
-    .returning()
-    .execute()
-    .then(rows => rows.at(0));
+      })
+      .onConflictDoUpdate({
+        target: developper.githubId,
+        set: {
+          username: githubUser.login,
+          bio: githubUser.bio,
+          avatarUrl: githubUser.avatarUrl,
+        },
+      })
+      .returning()
+      .execute()
+      .then(rows => rows.at(0));
 
-  if (!developer) {
-    throw createError("Failed to create or update developer");
+    console.log("[DB] Successfully created/updated developer:", githubUser.login);
+  }
+  catch (error) {
+    // Log detailed error information for debugging
+    console.error("[DB] Failed to create/update developer:", {
+      error,
+      user: githubUser.login,
+      databaseUrl: process.env.DATABASE_URL ? "Set" : "Not set",
+    });
   }
 
   const repoNodes = (githubUser.repositories.nodes ?? []).filter(
