@@ -15,6 +15,13 @@
       "when": 1759440340023,
       "tag": "0001_abnormal_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760111406748,
+      "tag": "0002_persistent_pull_request_stats",
+      "breakpoints": true
     }
   ]
 }
