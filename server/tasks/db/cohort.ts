@@ -4,6 +4,9 @@ import { parse } from "graphql";
 import { nanoid } from "nanoid";
 import { developper } from "~~/database/schema";
 import { useDrizzle } from "~~/database/client";
+import { inArray } from "drizzle-orm";
+import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
+import type { PullRequestStatsResponse } from "~~/server/services/pullRequestStatsService";
 
 interface CohortUser {
   id: string;
@@ -58,10 +61,22 @@ export default defineTask({
 
     const insertedDevs = await db.insert(developper).values(rows).returning().onConflictDoNothing();
 
+    const developers = await db
+      .select()
+      .from(developper)
+      .where(inArray(developper.username, names));
+
+    const pullRequestStats = (
+      await Promise.all(
+        developers.map(developer => ensurePullRequestStats(db, developer)),
+      )
+    ).filter((stats): stats is PullRequestStatsResponse => stats !== null);
+
     return {
       result: {
         names,
         insertedDevs,
+        pullRequestStats,
       },
     };
   },
