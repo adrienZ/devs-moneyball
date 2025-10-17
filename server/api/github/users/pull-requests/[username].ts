@@ -4,7 +4,7 @@ import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
 import type { DocumentType } from "~~/codegen";
 import { useDrizzle } from "~~/database/client";
-import { githubPullRequestStats } from "~~/database/schema";
+import { developper, githubPullRequestStats } from "~~/database/schema";
 
 const pullRequestsQuery = graphql(/* GraphQL */ `
   query GetPullRequestsStats($username: String!) {
@@ -49,10 +49,14 @@ type PullRequestStatsResponse = {
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
+type DeveloperRecord = typeof developper.$inferSelect;
 
-function mapRecordToResponse(record: PullRequestStatsRecord): PullRequestStatsResponse {
+function mapRecordToResponse(
+  record: PullRequestStatsRecord,
+  developerRecord: DeveloperRecord,
+): PullRequestStatsResponse {
   return {
-    login: record.username,
+    login: developerRecord.username,
     name: record.name ?? null,
     contributionsCollection: {
       totalPullRequestContributions: record.totalPullRequestContributions,
@@ -65,10 +69,10 @@ function mapRecordToResponse(record: PullRequestStatsRecord): PullRequestStatsRe
   };
 }
 
-function mapApiUserToDb(user: PullRequestsUser): PullRequestStatsInsert {
+function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
   return {
-    username: user.login,
+    developerId,
     name: user.name ?? null,
     totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
     totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
@@ -80,9 +84,12 @@ function mapApiUserToDb(user: PullRequestsUser): PullRequestStatsInsert {
   };
 }
 
-function mapApiUserToResponse(user: PullRequestsUser): PullRequestStatsResponse {
+function mapApiUserToResponse(
+  user: PullRequestsUser,
+  login: string,
+): PullRequestStatsResponse {
   return {
-    login: user.login,
+    login,
     name: user.name ?? null,
     contributionsCollection: {
       totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
@@ -106,15 +113,29 @@ export default defineEventHandler(async (event) => {
 
   const db = useDrizzle();
 
+  const developerRecord = await db
+    .select()
+    .from(developper)
+    .where(eq(developper.username, username))
+    .limit(1);
+
+  const developerRow = developerRecord.at(0);
+  if (!developerRow) {
+    throw createError({
+      statusCode: 404,
+      message: "Developer not found",
+    });
+  }
+
   const existingRecord = await db
     .select()
     .from(githubPullRequestStats)
-    .where(eq(githubPullRequestStats.username, username))
+    .where(eq(githubPullRequestStats.developerId, developerRow.id))
     .limit(1);
 
   const cachedRecord = existingRecord.at(0);
   if (cachedRecord) {
-    return mapRecordToResponse(cachedRecord);
+    return mapRecordToResponse(cachedRecord, developerRow);
   }
 
   const { user } = await getGithubClient().call(pullRequestsQuery, { username });
@@ -122,19 +143,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: "User not found" });
   }
 
-  const values = mapApiUserToDb(user);
+  const values = mapApiUserToDb(user, developerRow.id);
   const [savedRecord] = await db
     .insert(githubPullRequestStats)
     .values(values)
     .onConflictDoUpdate({
-      target: githubPullRequestStats.username,
+      target: githubPullRequestStats.developerId,
       set: values,
     })
     .returning();
 
   if (savedRecord) {
-    return mapRecordToResponse(savedRecord);
+    return mapRecordToResponse(savedRecord, developerRow);
   }
 
-  return mapApiUserToResponse(user);
+  return mapApiUserToResponse(user, developerRow.username);
 });

@@ -14,8 +14,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "username": {
-          "name": "username",
+        "developerId": {
+          "name": "developerId",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -151,11 +151,11 @@
         }
       },
       "indexes": {
-        "github_pull_request_stats_username_uk": {
-          "name": "github_pull_request_stats_username_uk",
+        "github_pull_request_stats_developer_id_uk": {
+          "name": "github_pull_request_stats_developer_id_uk",
           "columns": [
             {
-              "expression": "username",
+              "expression": "developerId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -167,7 +167,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "github_pull_request_stats_developerId_developper_id_fk": {
+          "name": "github_pull_request_stats_developerId_developper_id_fk",
+          "columns": [
+            "developerId"
+          ],
+          "foreignColumns": [
+            "id"
+          ],
+          "foreignTable": "developper",
+          "onDelete": "cascade",
+          "onUpdate": "no action",
+          "matchType": "simple"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

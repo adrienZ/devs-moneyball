@@ -77,7 +77,9 @@ export const githubPullRequestStats = pgTable(
     id: uuid()
       .$defaultFn(() => randomUUID())
       .primaryKey(),
-    username: text().notNull(),
+    developerId: text()
+      .notNull()
+      .references(() => developper.id, { onDelete: "cascade" }),
     name: text(),
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
@@ -88,6 +90,8 @@ export const githubPullRequestStats = pgTable(
     ...defaultDateColumns,
   },
   table => ({
-    usernameUnique: uniqueIndex("github_pull_request_stats_username_uk").on(table.username),
+    developerUnique: uniqueIndex("github_pull_request_stats_developer_id_uk").on(
+      table.developerId,
+    ),
   }),
 );
