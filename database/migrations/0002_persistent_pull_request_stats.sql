@@ -1,7 +1,6 @@
 CREATE TABLE "github_pull_request_stats" (
         "id" uuid PRIMARY KEY NOT NULL,
         "developerId" text NOT NULL,
-        "name" text,
         "totalPullRequestContributions" integer NOT NULL,
         "totalPullRequestReviewContributions" integer NOT NULL,
         "pullRequestsTotalCount" integer NOT NULL,

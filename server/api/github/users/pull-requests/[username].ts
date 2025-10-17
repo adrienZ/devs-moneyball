@@ -57,7 +57,7 @@ function mapRecordToResponse(
 ): PullRequestStatsResponse {
   return {
     login: developerRecord.username,
-    name: record.name ?? null,
+    name: null,
     contributionsCollection: {
       totalPullRequestContributions: record.totalPullRequestContributions,
       totalPullRequestReviewContributions: record.totalPullRequestReviewContributions,
@@ -73,7 +73,6 @@ function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullReques
   const nowIso = new Date().toISOString();
   return {
     developerId,
-    name: user.name ?? null,
     totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
     totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
     pullRequestsTotalCount: user.pullRequests.totalCount,

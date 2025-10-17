@@ -83,17 +83,11 @@
           "primaryKey": true,
           "notNull": true
         },
-        "username": {
-          "name": "username",
+        "developerId": {
+          "name": "developerId",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "totalPullRequestContributions": {
           "name": "totalPullRequestContributions",

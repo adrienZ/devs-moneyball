@@ -80,7 +80,6 @@ export const githubPullRequestStats = pgTable(
     developerId: text()
       .notNull()
       .references(() => developper.id, { onDelete: "cascade" }),
-    name: text(),
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
     pullRequestsTotalCount: integer().notNull(),
