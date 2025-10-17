@@ -70,3 +70,27 @@ export const developper = pgTable("developper", {
   bio: text(),
   ...defaultDateColumns,
 });
+
+export const githubPullRequestStats = pgTable(
+  "github_pull_request_stats",
+  {
+    id: uuid()
+      .$defaultFn(() => randomUUID())
+      .primaryKey(),
+    developerId: text()
+      .notNull()
+      .references(() => developper.id, { onDelete: "cascade" }),
+    totalPullRequestContributions: integer().notNull(),
+    totalPullRequestReviewContributions: integer().notNull(),
+    pullRequestsTotalCount: integer().notNull(),
+    mergedPullRequestsTotalCount: integer().notNull(),
+    closedPullRequestsTotalCount: integer().notNull(),
+    openPullRequestsTotalCount: integer().notNull(),
+    ...defaultDateColumns,
+  },
+  table => ({
+    developerUnique: uniqueIndex("github_pull_request_stats_developer_id_uk").on(
+      table.developerId,
+    ),
+  }),
+);
