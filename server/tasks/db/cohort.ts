@@ -7,6 +7,7 @@ import { useDrizzle } from "~~/database/client";
 import { inArray } from "drizzle-orm";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 import type { PullRequestStatsResponse } from "~~/server/services/pullRequestStatsService";
+import { z } from "zod";
 
 interface CohortUser {
   id: string;
@@ -40,16 +41,47 @@ function buildUsersQuery(logins: string[]) {
   `;
 }
 
+const payloadSchema = z.object({
+  msDuration: z.number().nonnegative().optional(),
+});
+
 export default defineTask({
   meta: {
     name: "db:cohort",
     description: "Fetch and store a new cohort snapshot",
   },
-  async run() {
+  async run({ payload }) {
+    const db = useDrizzle();
+
+    const safePayload = payloadSchema.parse(payload);
+
+    if (safePayload.msDuration) {
+      const durationMs = safePayload.msDuration;
+
+      const lastSnapshot = await db.query.snapshots.findFirst({
+        orderBy: (snapshots, { desc }) => [desc(snapshots.createdAt)],
+      });
+
+      if (lastSnapshot) {
+        const lastTime = new Date(lastSnapshot.createdAt).getTime();
+        const timeSinceLastSnapshot = Date.now() - lastTime;
+
+        if (timeSinceLastSnapshot < durationMs) {
+          const daysSince = Math.floor(timeSinceLastSnapshot / (1000 * 60 * 60 * 24));
+          const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+          return {
+            result: {
+              skipped: true,
+              message: `Cohort snapshot taken ${daysSince} days ago, which is within the specified duration of ${durationDays} days.`,
+            },
+          };
+        }
+      }
+    }
+
     const { names } = await $fetch("/api/getCohort");
 
     const cohortDevs: Record<string, CohortUser> = await getGithubClient().call(parse(buildUsersQuery(names)), {});
-    const db = useDrizzle();
 
     const rows = Object.values(cohortDevs).map((user: CohortUser) => ({
       id: nanoid(),
@@ -74,9 +106,8 @@ export default defineTask({
 
     return {
       result: {
-        names,
-        insertedDevs,
-        pullRequestStats,
+        skipped: false,
+        message: `Cohort snapshot created with ${insertedDevs.length} new developers. Fetched PR stats for ${pullRequestStats.length} developers.`,
       },
     };
   },
