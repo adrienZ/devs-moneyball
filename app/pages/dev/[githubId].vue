@@ -122,11 +122,6 @@ const rows = computed(() => {
   }));
 });
 
-const ratingsPretty = computed(() => {
-  if (!ratings.value) return "No ratings available.";
-  return JSON.stringify(ratings.value, null, 2);
-});
-
 const pullRequestsRows = computed(() => {
   if (!pullRequests.value) return [] as Array<{ metric: string; value: number }>;
   return [
@@ -329,14 +324,43 @@ const tabsItems = shallowRef<TabsItem[]>([
               <UTable :data="pullRequestsRows" />
             </UCard>
 
-            <UCard v-if="ratings">
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Ratings (Raw)
-                </h3>
-              </template>
-              <pre class="text-xs whitespace-pre-wrap break-words">{{ ratingsPretty }}</pre>
-            </UCard>
+            <section v-if="ratings">
+              <h3 class="text-lg font-bold mb-2">
+                Ratings
+              </h3>
+              <table class="w-full border-collapse text-sm">
+                <thead>
+                  <tr class="text-left border-b border-gray-200">
+                    <th class="py-2 pr-4 font-semibold">
+                      Code
+                    </th>
+                    <th class="py-2 pr-4 font-semibold">
+                      Metric
+                    </th>
+                    <th class="py-2 font-semibold">
+                      Note / 20
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="criterion in ratings.criteria"
+                    :key="criterion.code"
+                    class="border-b border-gray-100"
+                  >
+                    <td class="py-2 pr-4 font-medium">
+                      {{ criterion.code }}
+                    </td>
+                    <td class="py-2 pr-4">
+                      {{ criterion.label }}
+                    </td>
+                    <td class="py-2 font-semibold">
+                      {{ criterion.value ?? "N/A" }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
           </div>
         </div>
       </template>
