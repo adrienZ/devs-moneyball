@@ -219,6 +219,45 @@ const tabsItems = shallowRef<TabsItem[]>([
         <div class="my-6 grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           <!-- LEFT PANEL -->
           <div class="lg:col-span-2 space-y-6">
+            <UCard v-if="ratings">
+              <h3 class="text-lg font-bold mb-2">
+                Ratings
+              </h3>
+              <table class="w-full border-collapse text-sm">
+                <thead>
+                  <tr class="text-left border-b border-gray-200">
+                    <th class="py-2 pr-4 font-semibold">
+                      Code
+                    </th>
+                    <th class="py-2 pr-4 font-semibold">
+                      Metric
+                    </th>
+                    <th class="py-2 font-semibold">
+                      Note / 20
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="criterion in ratings.criteria"
+                    :key="criterion.code"
+                    class="border-b border-gray-100"
+                  >
+                    <td class="py-2 pr-4 font-medium">
+                      {{ criterion.code }}
+                    </td>
+                    <td class="py-2 pr-4">
+                      {{ criterion.label }}
+                    </td>
+                    <td class="py-2 font-semibold">
+                      {{ criterion.value ?? "N/A" }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </UCard>
+
+
             <!-- Overall rating -->
             <UCard>
               <template #header>
@@ -323,44 +362,6 @@ const tabsItems = shallowRef<TabsItem[]>([
               </template>
               <UTable :data="pullRequestsRows" />
             </UCard>
-
-            <section v-if="ratings">
-              <h3 class="text-lg font-bold mb-2">
-                Ratings
-              </h3>
-              <table class="w-full border-collapse text-sm">
-                <thead>
-                  <tr class="text-left border-b border-gray-200">
-                    <th class="py-2 pr-4 font-semibold">
-                      Code
-                    </th>
-                    <th class="py-2 pr-4 font-semibold">
-                      Metric
-                    </th>
-                    <th class="py-2 font-semibold">
-                      Note / 20
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="criterion in ratings.criteria"
-                    :key="criterion.code"
-                    class="border-b border-gray-100"
-                  >
-                    <td class="py-2 pr-4 font-medium">
-                      {{ criterion.code }}
-                    </td>
-                    <td class="py-2 pr-4">
-                      {{ criterion.label }}
-                    </td>
-                    <td class="py-2 font-semibold">
-                      {{ criterion.value ?? "N/A" }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
           </div>
         </div>
       </template>
