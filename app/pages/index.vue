@@ -7,6 +7,7 @@ import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu, UPagination } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
+import type { LanguageListEntry } from "~~/server/api/languages";
 // import CriteriaPicker from "~/components/CriteriaPicker.vue";
 
 const params = useUrlSearchParams("history");
@@ -29,8 +30,8 @@ function useLocationSearch() {
   const searchTerm = ref("");
 
   // use generic typing instead of runtime to avoid https://github.com/nitrojs/nitro/issues/470
-  const query = useAsyncData<LocationSuggestion[]>("location-query", () => {
-    return $fetch("/api/github/location-search", {
+  const query = useAsyncData("location-query", () => {
+    return $fetch<LocationSuggestion[]>("/api/github/location-search", {
       query: { q: searchTerm.value },
     });
   }, {
@@ -99,7 +100,7 @@ function useLanguageSearch() {
   const selectedLanguages = ref<string[]>([]);
 
   const query = useAsyncData("language-query", () => {
-    return $fetch("/api/languages");
+    return $fetch<LanguageListEntry[]>("/api/languages");
   }, {
     transform: list => list.map(lang => lang.label),
   });
