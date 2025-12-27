@@ -28,7 +28,8 @@ function useLocationSearch() {
   const locationOptions = ref<LocationSuggestion[]>([]);
   const searchTerm = ref("");
 
-  const query = useAsyncData("location-query", () => {
+  // use generic typing instead of runtime to avoid https://github.com/nitrojs/nitro/issues/470
+  const query = useAsyncData<LocationSuggestion[]>("location-query", () => {
     return $fetch("/api/github/location-search", {
       query: { q: searchTerm.value },
     });
