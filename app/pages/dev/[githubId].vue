@@ -33,6 +33,14 @@ interface PullRequestsStats {
   openPullRequests: { totalCount: number };
 }
 
+interface RatingsResponse {
+  criteria: Array<{
+    code: string;
+    label: string;
+    value: number | null;
+  }>;
+}
+
 const route = useRoute();
 const githubId = (route.params as { githubId: string }).githubId;
 
@@ -56,6 +64,14 @@ const { data: pullRequests } = useAsyncData<PullRequestsStats | null>(
   () => $fetch<PullRequestsStats>(
     `/api/github/users/pull-requests/${githubId}`,
   ),
+  {
+    default: () => null,
+  },
+);
+
+const { data: ratings } = useAsyncData<RatingsResponse | null>(
+  "user-ratings",
+  () => $fetch<RatingsResponse>(`/api/github/users/ratings/${githubId}`),
   {
     default: () => null,
   },
@@ -104,6 +120,11 @@ const rows = computed(() => {
     metric: key,
     value,
   }));
+});
+
+const ratingsPretty = computed(() => {
+  if (!ratings.value) return "No ratings available.";
+  return JSON.stringify(ratings.value, null, 2);
 });
 
 const pullRequestsRows = computed(() => {
@@ -306,6 +327,15 @@ const tabsItems = shallowRef<TabsItem[]>([
                 </h3>
               </template>
               <UTable :data="pullRequestsRows" />
+            </UCard>
+
+            <UCard v-if="ratings">
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Ratings (Raw)
+                </h3>
+              </template>
+              <pre class="text-xs whitespace-pre-wrap break-words">{{ ratingsPretty }}</pre>
             </UCard>
           </div>
         </div>
