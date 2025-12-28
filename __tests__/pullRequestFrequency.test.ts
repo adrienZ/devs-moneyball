@@ -21,6 +21,15 @@ describe("ratePullRequestFrequency", () => {
       cohortCounts: [0, 2, 4],
     });
 
-    expect(percentile).toBe(33);
+    expect(percentile).toBeCloseTo(33.33, 2);
+  });
+
+  it("returns fractional percentiles without rounding", () => {
+    const percentile = ratePullRequestFrequency({
+      userPullRequests: 2,
+      cohortCounts: [1, 2, 3],
+    });
+
+    expect(percentile).toBeCloseTo(66.67, 2);
   });
 });

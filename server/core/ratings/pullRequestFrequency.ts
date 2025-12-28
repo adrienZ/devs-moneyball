@@ -13,5 +13,5 @@ export function ratePullRequestFrequency(
   }
 
   const belowOrEqual = cohortCounts.filter(value => value <= userPullRequests).length;
-  return Math.round((belowOrEqual / cohortSize) * 100);
+  return (belowOrEqual / cohortSize) * 100;
 }

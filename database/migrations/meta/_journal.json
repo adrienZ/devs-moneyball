@@ -29,6 +29,13 @@
       "when": 1760775914319,
       "tag": "0003_add_cohort_snapshot_source_to_pr_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1761400000000,
+      "tag": "0004_add_external_weekly_pr_count",
+      "breakpoints": true
     }
   ]
 }
