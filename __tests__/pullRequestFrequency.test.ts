@@ -21,6 +21,6 @@ describe("ratePullRequestFrequency", () => {
       cohortCounts: [0, 2, 4],
     });
 
-    expect(percentile).toBe(33);
+    expect(percentile).toBeCloseTo(33.33, 2);
   });
 });
