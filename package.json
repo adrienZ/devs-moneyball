@@ -23,7 +23,7 @@
     "@nuxt/ui": "4.3.0",
     "@octokit/graphql": "^9.0.3",
     "@types/pg": "^8.16.0",
-    "@vueuse/core": "^13.9.0",
+    "@vueuse/core": "^14.1.0",
     "chart.js": "^4.5.1",
     "consola": "^3.4.2",
     "drizzle-orm": "^0.45.1",
@@ -39,7 +39,7 @@
     "vue-chartjs": "^5.3.3",
     "vue-router": "^4.6.4",
     "yaml": "^2.8.2",
-    "zod": "^4.1.12"
+    "zod": "^4.2.1"
   },
   "packageManager": "pnpm@10.14.0+sha256.297534e65d5842450539c1e8022c8831ab5e1fe2eb74664787a815519542d620",
   "devDependencies": {
