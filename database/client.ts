@@ -9,16 +9,19 @@ const DATABASE_URL = process.env.DATABASE_URL;
 
 let db: ReturnType<typeof drizzlePostgres>;
 
-if (DATABASE_URL) {
-  // Production: use PostgreSQL
-  db = drizzlePostgres(postgres(DATABASE_URL, { prepare: false, ssl: "require" }), { schema });
-}
-else {
-  // Development: use PGlite
+if (!DATABASE_URL) {
+  // Fallback or testing: use PGlite
   const __dirname = new URL(".", import.meta.url).pathname;
   const dbFilesysPath = path.resolve(__dirname, "../../.data/pglite");
   const client = new PGlite(dbFilesysPath);
   db = drizzlePglite({ client, schema, logger: false }) as unknown as ReturnType<typeof drizzlePostgres>;
+}
+else if (DATABASE_URL.includes("supabase")) {
+  // Production: use supabase pooler
+  db = drizzlePostgres(postgres(DATABASE_URL, { prepare: false, ssl: "require" }), { schema });
+}
+else {
+  db = drizzlePostgres(postgres(DATABASE_URL), { schema });
 }
 
 export function useDrizzle() {

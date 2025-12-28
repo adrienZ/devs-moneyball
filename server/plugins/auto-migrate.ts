@@ -24,5 +24,5 @@ export default defineNitroPlugin(async () => {
       msDuration: oneYearMs,
     },
   });
-  consola.success("Cohort task result:", result);
+  consola.success("Cohort task result:", JSON.stringify(result.result, null, 2));
 });
