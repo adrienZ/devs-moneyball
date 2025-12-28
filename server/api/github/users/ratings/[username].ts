@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
 import {
   developper,
@@ -7,6 +7,7 @@ import {
   snapshots,
 } from "~~/database/schema";
 import { ratePullRequestFrequency } from "~~/server/core/ratings/pullRequestFrequency";
+import { percentileToTwentyScale } from "~~/server/core/ratings/percentileScale";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 
 type RatingCriterion = {
@@ -15,9 +16,7 @@ type RatingCriterion = {
   value: number | null;
 };
 
-function percentileToTwentyScale(percentile: number): number {
-  return 1 + Math.floor((percentile / 100) * 19);
-}
+const COHORT_LOOKBACK_YEARS = 5;
 
 export default defineEventHandler(async (event) => {
   const username = getRouterParam(event, "username");
@@ -58,10 +57,16 @@ export default defineEventHandler(async (event) => {
 
   let cohortCounts: number[] = [];
   if (latestSnapshot) {
+    const cutoffDate = new Date();
+    cutoffDate.setUTCFullYear(cutoffDate.getUTCFullYear() - COHORT_LOOKBACK_YEARS);
+    const cutoffIso = cutoffDate.toISOString();
     cohortCounts = await db
       .select({ total: githubPullRequestStats.mergedExternalPullRequestsWeeklyCount })
       .from(githubPullRequestStats)
-      .where(eq(githubPullRequestStats.cohortSnapshotSourceId, latestSnapshot.id))
+      .where(and(
+        eq(githubPullRequestStats.cohortSnapshotSourceId, latestSnapshot.id),
+        gte(githubPullRequestStats.createdAt, cutoffIso),
+      ))
       .then(rows => rows.map(row => row.total));
   }
 
