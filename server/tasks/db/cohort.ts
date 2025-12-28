@@ -2,9 +2,9 @@ import { defineTask } from "nitropack/runtime";
 import { getGithubClient } from "~~/server/githubClient";
 import { parse } from "graphql";
 import { nanoid } from "nanoid";
-import { developper } from "~~/database/schema";
+import { developper, snapshots } from "~~/database/schema";
 import { useDrizzle } from "~~/database/client";
-import { inArray } from "drizzle-orm";
+import { inArray, desc } from "drizzle-orm";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 import type { PullRequestStatsResponse } from "~~/server/services/pullRequestStatsService";
 import { z } from "zod";
@@ -58,9 +58,12 @@ export default defineTask({
     if (safePayload.msDuration) {
       const durationMs = safePayload.msDuration;
 
-      const lastSnapshot = await db.query.snapshots.findFirst({
-        orderBy: (snapshots, { desc }) => [desc(snapshots.createdAt)],
-      });
+      const lastSnapshot = await db
+        .select()
+        .from(snapshots)
+        .orderBy(desc(snapshots.createdAt))
+        .limit(1)
+        .then(rows => rows.at(0));
 
       if (lastSnapshot) {
         const lastTime = new Date(lastSnapshot.createdAt).getTime();
