@@ -8,6 +8,8 @@ import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMe
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
 import type { LanguageListEntry } from "~~/server/api/languages";
+import type { InternalApi } from "nitropack/types";
+
 // import CriteriaPicker from "~/components/CriteriaPicker.vue";
 
 const params = useUrlSearchParams("history");
@@ -204,7 +206,7 @@ const totalPages = ref(1);
 const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
 const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.country);
 
-const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch("/api/github/popular-users", {
+const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch<InternalApi["/api/github/popular-users"]["get"]>("/api/github/popular-users", {
   query: {
     minFollowers: minFollowers.value,
     maxFollowers: maxFollowers.value,

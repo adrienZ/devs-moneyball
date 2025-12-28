@@ -17,7 +17,7 @@ type RatingCriterion = {
 };
 
 function percentileToTwentyScale(percentile: number): number {
-  return Math.round(((percentile / 100) * 20) * 10) / 10;
+  return Math.floor(((percentile / 100) * 20) * 10) / 10;
 }
 
 export default defineEventHandler(async (event) => {
@@ -85,9 +85,9 @@ export default defineEventHandler(async (event) => {
 
   const pullRequestFrequency = cohortCounts.length > 0
     ? percentileToTwentyScale(ratePullRequestFrequency({
-      userPullRequests: stats.pullRequests.totalCount,
-      cohortCounts,
-    }))
+        userPullRequests: stats.pullRequests.totalCount,
+        cohortCounts,
+      }))
     : null;
 
   const criteria: RatingCriterion[] = [
