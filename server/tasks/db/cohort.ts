@@ -75,7 +75,7 @@ export default defineTask({
           return {
             result: {
               skipped: true,
-              message: `Cohort snapshot taken ${daysSince} days ago, which is within the specified duration of ${durationDays} days.`,
+              message: `[${lastSnapshot.id}] Cohort snapshot taken ${daysSince} days ago, which is within the specified duration of ${durationDays} days.`,
             },
           };
         }
