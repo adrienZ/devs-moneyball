@@ -37,8 +37,20 @@ const pullRequestsQuery = graphql(/* GraphQL */ `
   }
 `);
 
+const mergedExternalPullRequestsCountQuery = graphql(/* GraphQL */ `
+  query SearchMergedExternalPRCount($q: String!) {
+    search(query: $q, type: ISSUE, first: 1) {
+      issueCount
+    }
+  }
+`);
+
 type PullRequestsQueryResult = DocumentType<typeof pullRequestsQuery>;
 type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
+
+const WEEKLY_EXTERNAL_PULL_REQUEST_DAYS = 7;
+const WEEKLY_EXTERNAL_PULL_REQUEST_CAP = 30;
+const COHORT_LOOKBACK_YEARS = 5;
 
 export type PullRequestStatsResponse = {
   login: string;
@@ -51,6 +63,7 @@ export type PullRequestStatsResponse = {
   mergedPullRequests: { totalCount: number };
   closedPullRequests: { totalCount: number };
   openPullRequests: { totalCount: number };
+  mergedExternalPullRequestsWeeklyCount: number;
 };
 
 function mapRecordToResponse(
@@ -68,10 +81,15 @@ function mapRecordToResponse(
     mergedPullRequests: { totalCount: record.mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: record.closedPullRequestsTotalCount },
     openPullRequests: { totalCount: record.openPullRequestsTotalCount },
+    mergedExternalPullRequestsWeeklyCount: record.mergedExternalPullRequestsWeeklyCount,
   };
 }
 
-function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullRequestStatsInsert {
+function mapApiUserToDb(
+  user: PullRequestsUser,
+  developerId: string,
+  mergedExternalPullRequestsWeeklyCount: number,
+): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
   return {
     developerId,
@@ -81,6 +99,7 @@ function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullReques
     mergedPullRequestsTotalCount: user.mergedPullRequests.totalCount,
     closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
     openPullRequestsTotalCount: user.openPullRequests.totalCount,
+    mergedExternalPullRequestsWeeklyCount,
     updatedAt: nowIso,
   };
 }
@@ -92,6 +111,7 @@ type PullRequestStatsOptions = {
 function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
+  mergedExternalPullRequestsWeeklyCount: number,
 ): PullRequestStatsResponse {
   return {
     login,
@@ -104,7 +124,35 @@ function mapApiUserToResponse(
     mergedPullRequests: { totalCount: user.mergedPullRequests.totalCount },
     closedPullRequests: { totalCount: user.closedPullRequests.totalCount },
     openPullRequests: { totalCount: user.openPullRequests.totalCount },
+    mergedExternalPullRequestsWeeklyCount,
   };
+}
+
+function getDateStringDaysAgo(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function getDateStringYearsAgo(years: number): string {
+  const date = new Date();
+  date.setUTCFullYear(date.getUTCFullYear() - years);
+  return date.toISOString().slice(0, 10);
+}
+
+async function fetchMergedExternalPullRequestsWeeklyCount(
+  login: string,
+): Promise<number> {
+  const fromDate = getDateStringDaysAgo(WEEKLY_EXTERNAL_PULL_REQUEST_DAYS);
+  const cohortFromDate = getDateStringYearsAgo(COHORT_LOOKBACK_YEARS);
+  const query = `type:pr author:${login} is:merged is:public -user:${login} merged:>=${fromDate} created:>=${cohortFromDate}`;
+  const response = await getGithubClient().call(
+    mergedExternalPullRequestsCountQuery,
+    { q: query },
+  );
+
+  const count = response.search.issueCount;
+  return Math.min(count, WEEKLY_EXTERNAL_PULL_REQUEST_CAP);
 }
 
 export async function ensurePullRequestStats(
@@ -120,15 +168,23 @@ export async function ensurePullRequestStats(
 
   const cachedRecord = existingRecord.at(0);
   if (cachedRecord) {
-    if (
+    const shouldUpdateCohortSnapshot = Boolean(
       options.cohortSnapshotSourceId
-      && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
-    ) {
+      && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId,
+    );
+
+    if (shouldUpdateCohortSnapshot) {
+      const updatePayload: Partial<PullRequestStatsInsert> = {};
+
+      if (shouldUpdateCohortSnapshot) {
+        updatePayload.cohortSnapshotSourceId = options.cohortSnapshotSourceId ?? null;
+      }
+
       const nowIso = new Date().toISOString();
       const [updatedRecord] = await db
         .update(githubPullRequestStats)
         .set({
-          cohortSnapshotSourceId: options.cohortSnapshotSourceId,
+          ...updatePayload,
           updatedAt: nowIso,
         })
         .where(eq(githubPullRequestStats.developerId, developer.id))
@@ -150,8 +206,11 @@ export async function ensurePullRequestStats(
     return null;
   }
 
+  const mergedExternalPullRequestsWeeklyCount = await fetchMergedExternalPullRequestsWeeklyCount(
+    developer.username,
+  );
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id),
+    ...mapApiUserToDb(user, developer.id, mergedExternalPullRequestsWeeklyCount),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const [savedRecord] = await db
@@ -167,5 +226,5 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username);
+  return mapApiUserToResponse(user, developer.username, mergedExternalPullRequestsWeeklyCount);
 }
