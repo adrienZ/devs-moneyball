@@ -22,6 +22,13 @@
       "when": 1760111406748,
       "tag": "0002_persistent_pull_request_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1760775914319,
+      "tag": "0003_add_cohort_snapshot_source_to_pr_stats",
+      "breakpoints": true
     }
   ]
 }

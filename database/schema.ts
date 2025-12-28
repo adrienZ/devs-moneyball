@@ -80,6 +80,7 @@ export const githubPullRequestStats = pgTable(
     developerId: text()
       .notNull()
       .references(() => developper.id, { onDelete: "cascade" }),
+    cohortSnapshotSourceId: uuid().references(() => snapshots.id, { onDelete: "set null" }),
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
     pullRequestsTotalCount: integer().notNull(),
@@ -91,6 +92,9 @@ export const githubPullRequestStats = pgTable(
   table => ({
     developerUnique: uniqueIndex("github_pull_request_stats_developer_id_uk").on(
       table.developerId,
+    ),
+    cohortSnapshotIdx: index("github_pull_request_stats_cohort_snapshot_idx").on(
+      table.cohortSnapshotSourceId,
     ),
   }),
 );
