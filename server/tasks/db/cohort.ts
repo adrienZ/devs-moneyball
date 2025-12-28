@@ -105,6 +105,7 @@ export default defineTask({
       await Promise.all(
         developers.map(developer => ensurePullRequestStats(db, developer, {
           cohortSnapshotSourceId: snapshotId,
+          refreshExternalWeeklyCount: true,
         })),
       )
     ).filter((stats): stats is PullRequestStatsResponse => stats !== null);

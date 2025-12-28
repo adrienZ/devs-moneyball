@@ -16,7 +16,7 @@ type RatingCriterion = {
 };
 
 function percentileToTwentyScale(percentile: number): number {
-  return Math.floor(((percentile / 100) * 20) * 10) / 10;
+  return 1 + Math.floor((percentile / 100) * 19);
 }
 
 export default defineEventHandler(async (event) => {
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
   let cohortCounts: number[] = [];
   if (latestSnapshot) {
     cohortCounts = await db
-      .select({ total: githubPullRequestStats.pullRequestsTotalCount })
+      .select({ total: githubPullRequestStats.mergedExternalPullRequestsWeeklyCount })
       .from(githubPullRequestStats)
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, latestSnapshot.id))
       .then(rows => rows.map(row => row.total));
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
 
   const pullRequestFrequency = cohortCounts.length > 0
     ? percentileToTwentyScale(ratePullRequestFrequency({
-        userPullRequests: stats.pullRequests.totalCount,
+        userPullRequests: stats.mergedExternalPullRequestsWeeklyCount,
         cohortCounts,
       }))
     : null;
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
   const criteria: RatingCriterion[] = [
     {
       code: "A1",
-      label: "Pull request frequency percentile",
+      label: "Volume utile (PR mergées externes, 7j)",
       value: pullRequestFrequency,
     },
   ];
