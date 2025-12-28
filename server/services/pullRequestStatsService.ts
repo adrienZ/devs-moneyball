@@ -85,6 +85,10 @@ function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullReques
   };
 }
 
+type PullRequestStatsOptions = {
+  cohortSnapshotSourceId?: string;
+};
+
 function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
@@ -106,6 +110,7 @@ function mapApiUserToResponse(
 export async function ensurePullRequestStats(
   db: DrizzleClient,
   developer: DeveloperRecord,
+  options: PullRequestStatsOptions = {},
 ): Promise<PullRequestStatsResponse | null> {
   const existingRecord = await db
     .select()
@@ -115,6 +120,25 @@ export async function ensurePullRequestStats(
 
   const cachedRecord = existingRecord.at(0);
   if (cachedRecord) {
+    if (
+      options.cohortSnapshotSourceId
+      && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
+    ) {
+      const nowIso = new Date().toISOString();
+      const [updatedRecord] = await db
+        .update(githubPullRequestStats)
+        .set({
+          cohortSnapshotSourceId: options.cohortSnapshotSourceId,
+          updatedAt: nowIso,
+        })
+        .where(eq(githubPullRequestStats.developerId, developer.id))
+        .returning();
+
+      if (updatedRecord) {
+        return mapRecordToResponse(updatedRecord, developer);
+      }
+    }
+
     return mapRecordToResponse(cachedRecord, developer);
   }
 
@@ -126,7 +150,10 @@ export async function ensurePullRequestStats(
     return null;
   }
 
-  const values = mapApiUserToDb(user, developer.id);
+  const values: PullRequestStatsInsert = {
+    ...mapApiUserToDb(user, developer.id),
+    cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
+  };
   const [savedRecord] = await db
     .insert(githubPullRequestStats)
     .values(values)

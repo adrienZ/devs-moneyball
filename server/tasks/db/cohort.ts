@@ -82,7 +82,7 @@ export default defineTask({
       }
     }
 
-    const { names } = await $fetch("/api/getCohort");
+    const { names, snapshotId } = await $fetch("/api/getCohort");
 
     const cohortDevs: Record<string, CohortUser> = await getGithubClient().call(parse(buildUsersQuery(names)), {});
 
@@ -103,7 +103,9 @@ export default defineTask({
 
     const pullRequestStats = (
       await Promise.all(
-        developers.map(developer => ensurePullRequestStats(db, developer)),
+        developers.map(developer => ensurePullRequestStats(db, developer, {
+          cohortSnapshotSourceId: snapshotId,
+        })),
       )
     ).filter((stats): stats is PullRequestStatsResponse => stats !== null);
 
