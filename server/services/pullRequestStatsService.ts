@@ -1,12 +1,9 @@
-import { eq } from "drizzle-orm";
 import { graphql } from "~~/codegen";
 import type { DocumentType } from "~~/codegen";
-import type { useDrizzle } from "~~/database/client";
 import type { developper } from "~~/database/schema";
 import { githubPullRequestStats } from "~~/database/schema";
 import { getGithubClient } from "~~/server/githubClient";
-
-type DrizzleClient = ReturnType<typeof useDrizzle>;
+import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
@@ -108,35 +105,22 @@ function mapApiUserToResponse(
 }
 
 export async function ensurePullRequestStats(
-  db: DrizzleClient,
   developer: DeveloperRecord,
   options: PullRequestStatsOptions = {},
 ): Promise<PullRequestStatsResponse | null> {
-  const existingRecord = await db
-    .select()
-    .from(githubPullRequestStats)
-    .where(eq(githubPullRequestStats.developerId, developer.id))
-    .limit(1);
-
-  const cachedRecord = existingRecord.at(0);
+  const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
+  const cachedRecord = await pullRequestStatsRepository.findByDeveloperId(developer.id);
   if (cachedRecord) {
     if (
       options.cohortSnapshotSourceId
       && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
     ) {
-      const nowIso = new Date().toISOString();
-      const [updatedRecord] = await db
-        .update(githubPullRequestStats)
-        .set({
-          cohortSnapshotSourceId: options.cohortSnapshotSourceId,
-          updatedAt: nowIso,
-        })
-        .where(eq(githubPullRequestStats.developerId, developer.id))
-        .returning();
+      const updatedRecord = await pullRequestStatsRepository.updateCohortSnapshotSource(
+        developer.id,
+        options.cohortSnapshotSourceId,
+      );
 
-      if (updatedRecord) {
-        return mapRecordToResponse(updatedRecord, developer);
-      }
+      if (updatedRecord) return mapRecordToResponse(updatedRecord, developer);
     }
 
     return mapRecordToResponse(cachedRecord, developer);
@@ -154,14 +138,7 @@ export async function ensurePullRequestStats(
     ...mapApiUserToDb(user, developer.id),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
-  const [savedRecord] = await db
-    .insert(githubPullRequestStats)
-    .values(values)
-    .onConflictDoUpdate({
-      target: githubPullRequestStats.developerId,
-      set: values,
-    })
-    .returning();
+  const savedRecord = await pullRequestStatsRepository.upsert(values);
 
   if (savedRecord) {
     return mapRecordToResponse(savedRecord, developer);

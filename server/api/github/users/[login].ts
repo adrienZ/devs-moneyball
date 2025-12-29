@@ -1,9 +1,8 @@
 import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { graphql } from "~~/codegen";
-import { useDrizzle } from "~~/database/client";
-import { developper } from "~~/database/schema";
 import { nanoid } from "nanoid";
+import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 
 const query = graphql(/* GraphQL */ `
   query GetUserInfo($login: String!) {
@@ -75,27 +74,14 @@ export default defineEventHandler(async (event) => {
     bio: githubUser.bio,
   };
 
-  const db = useDrizzle();
-  const developer = await db
-    .insert(developper)
-    .values({
-      id: nanoid(),
-      githubId: githubUser.id,
-      username: githubUser.login,
-      bio: githubUser.bio,
-      avatarUrl: githubUser.avatarUrl,
-    })
-    .onConflictDoUpdate({
-      target: developper.githubId,
-      set: {
-        username: githubUser.login,
-        bio: githubUser.bio,
-        avatarUrl: githubUser.avatarUrl,
-      },
-    })
-    .returning()
-    .execute()
-    .then(rows => rows.at(0));
+  const developerRepository = DeveloperRepository.getInstance();
+  const developer = await developerRepository.upsertFromGithub({
+    id: nanoid(),
+    githubId: githubUser.id,
+    username: githubUser.login,
+    bio: githubUser.bio,
+    avatarUrl: githubUser.avatarUrl,
+  });
 
   if (!developer) {
     throw createError("Failed to create or update developer");

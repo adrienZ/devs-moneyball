@@ -1,7 +1,5 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { eq } from "drizzle-orm";
-import { useDrizzle } from "~~/database/client";
-import { developper } from "~~/database/schema";
+import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 
 export default defineEventHandler(async (event) => {
@@ -13,15 +11,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const db = useDrizzle();
-
-  const developerRecord = await db
-    .select()
-    .from(developper)
-    .where(eq(developper.username, username))
-    .limit(1);
-
-  const developerRow = developerRecord.at(0);
+  const developerRepository = DeveloperRepository.getInstance();
+  const developerRow = await developerRepository.findByUsername(username);
   if (!developerRow) {
     throw createError({
       statusCode: 404,
@@ -29,7 +20,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const stats = await ensurePullRequestStats(db, developerRow);
+  const stats = await ensurePullRequestStats(developerRow);
   if (!stats) {
     throw createError({ statusCode: 404, message: "User not found" });
   }
