@@ -1,65 +1,18 @@
-import { graphql } from "~~/codegen";
-import type { DocumentType } from "~~/codegen";
+import type { DocumentType } from "../../codegen";
 import type { developper, githubPullRequestStats } from "~~/database/schema";
 import { getGithubClient } from "~~/server/githubClient";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
+import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats";
+import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
 type DeveloperRecord = typeof developper.$inferSelect;
 
-const pullRequestsQuery = graphql(/* GraphQL */ `
-  query GetPullRequestsStats($username: String!) {
-    user(login: $username) {
-      login
-      name
-      contributionsCollection {
-        totalPullRequestContributions
-        totalPullRequestReviewContributions
-      }
-      pullRequests(first: 1) {
-        totalCount
-      }
-      mergedPullRequests: pullRequests(first: 1, states: MERGED) {
-        totalCount
-      }
-      closedPullRequests: pullRequests(first: 1, states: CLOSED) {
-        totalCount
-      }
-      openPullRequests: pullRequests(first: 1, states: OPEN) {
-        totalCount
-      }
-    }
-  }
-`);
-
-const mergedPullRequestsQuery = graphql(/* GraphQL */ `
-  query SearchMergedPullRequests($q: String!, $after: String) {
-    search(query: $q, type: ISSUE, first: 100, after: $after) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        ... on PullRequest {
-          __typename
-          createdAt
-          mergedAt
-          number
-          repository {
-            owner {
-              login
-            }
-          }
-        }
-      }
-    }
-  }
-`);
-
-type PullRequestsQueryResult = DocumentType<typeof pullRequestsQuery>;
+type PullRequestsQueryResult = DocumentType<typeof getPullRequestsStatsQuery>;
 type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
-type MergedPullRequestsQueryResult = DocumentType<typeof mergedPullRequestsQuery>;
+
+type MergedPullRequestsQueryResult = DocumentType<typeof searchMergedPullRequestsQuery>;
 type MergedPullRequestsSearch = MergedPullRequestsQueryResult["search"];
 type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["nodes"]>[number]>;
 
@@ -138,10 +91,10 @@ function mapApiUserToResponse(
 function getFiveYearsAgoDate(): string {
   const now = new Date();
   now.setFullYear(now.getFullYear() - 5);
-  return now.toISOString().split("T")[0];
+  return now.toISOString().split("T")[0] ?? now.toISOString();
 }
 
-function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode {
+function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode & { __typename: "PullRequest" } {
   return !!node && node.__typename === "PullRequest";
 }
 
@@ -153,7 +106,8 @@ async function fetchMergedPullRequestsCount(login: string): Promise<number> {
   let total = 0;
 
   do {
-    const resp = await githubClient.call(mergedPullRequestsQuery, {
+    // FIXME: codegen infer is broken for some reason here
+    const resp: MergedPullRequestsQueryResult = await githubClient.call(searchMergedPullRequestsQuery, {
       q: query,
       after,
     });
@@ -164,7 +118,7 @@ async function fetchMergedPullRequestsCount(login: string): Promise<number> {
       .filter(node => node.repository.owner.login === login)
       .length;
 
-    after = resp.search.pageInfo.endCursor;
+    after = resp.search.pageInfo.endCursor ?? null;
     if (!resp.search.pageInfo.hasNextPage) {
       break;
     }
@@ -195,7 +149,7 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(cachedRecord, developer);
   }
 
-  const { user } = await getGithubClient().call(pullRequestsQuery, {
+  const { user } = await getGithubClient().call(getPullRequestsStatsQuery, {
     username: developer.username,
   });
 

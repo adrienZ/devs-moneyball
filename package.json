@@ -51,7 +51,7 @@
     "@octokit/graphql-schema": "^15.26.1",
     "@types/node": "^24.8.1",
     "drizzle-kit": "^0.31.8",
-    "unplugin-vue-router": "^0.19.1",
+    "unplugin-vue-router": "^0.19.2",
     "vitest": "^4.0.16",
     "vue-tsc": "^3.2.1"
   }

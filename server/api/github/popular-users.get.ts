@@ -1,26 +1,8 @@
 import type { ResultOf } from "@graphql-typed-document-node/core";
 import { defineEventHandler, getQuery } from "h3";
 import { z } from "zod";
-import { graphql } from "~~/codegen";
 import { getGithubClient } from "~~/server/githubClient";
-
-const popularUsersQuery = graphql(/* GraphQL */ `
-query PopularUsers($q: String!, $pageSize: Int!) {
-  search(query: $q, type: USER, first: $pageSize) {
-    userCount
-    nodes {
-      ... on User {
-        login
-        name
-        location
-        followers {
-          totalCount
-        }
-        createdAt
-      }
-    }
-  }
-}`);
+import { popularUsersQuery } from "~~/server/graphql/popularUsers";
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
 

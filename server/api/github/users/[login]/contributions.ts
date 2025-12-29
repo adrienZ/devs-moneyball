@@ -1,30 +1,7 @@
 import type { H3Event } from "h3";
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { graphql } from "~~/codegen";
 import { getGithubClient } from "~~/server/githubClient";
-
-const contributionsQuery = graphql(/* GraphQL */ `
-  query SearchMergedExternalPRs($q: String!) {
-    search(query: $q, type: ISSUE, first: 50) {
-      nodes {
-        ... on PullRequest {
-          __typename
-          title
-          url
-          number
-          createdAt
-          mergedAt
-          repository {
-            nameWithOwner
-            url
-            stargazerCount
-            owner { avatarUrl }
-          }
-        }
-      }
-    }
-  }
-`);
+import { searchMergedExternalPRsQuery } from "~~/server/graphql/searchMergedExternalPRs";
 
 interface PullRequest {
   title: string;
@@ -52,7 +29,7 @@ export default defineEventHandler(async (event: H3Event) => {
   try {
     const query = `type:pr author:${login} is:merged is:public -user:${login} sort:updated-desc`;
     const resp = await getGithubClient().call(
-      contributionsQuery,
+      searchMergedExternalPRsQuery,
       { q: query },
     );
 
