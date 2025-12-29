@@ -8,6 +8,7 @@ Install dependencies:
 
 ```bash
 pnpm install
+pnpm codegen
 ```
 
 ## Development Server
