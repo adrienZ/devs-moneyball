@@ -257,7 +257,6 @@ const tabsItems = shallowRef<TabsItem[]>([
               </table>
             </UCard>
 
-
             <!-- Overall rating -->
             <UCard>
               <template #header>

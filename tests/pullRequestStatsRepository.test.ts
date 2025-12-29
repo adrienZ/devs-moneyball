@@ -11,7 +11,6 @@ beforeEach(async ({ task }) => {
   }));
 });
 
-
 describe("PullRequestStatsRepository", () => {
   it("upserts stats and lists cohort counts", async () => {
     const { DeveloperRepository } = await import("../server/repositories/developerRepository");

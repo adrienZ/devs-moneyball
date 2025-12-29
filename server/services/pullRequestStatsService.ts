@@ -1,7 +1,6 @@
 import { graphql } from "~~/codegen";
 import type { DocumentType } from "~~/codegen";
-import type { developper } from "~~/database/schema";
-import { githubPullRequestStats } from "~~/database/schema";
+import type { developper, githubPullRequestStats } from "~~/database/schema";
 import { getGithubClient } from "~~/server/githubClient";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 
