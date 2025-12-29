@@ -44,6 +44,7 @@ describe("PullRequestStatsRepository", () => {
       totalPullRequestContributions: 3,
       totalPullRequestReviewContributions: 2,
       pullRequestsTotalCount: 5,
+      pullRequestsWeeklyFrequencyCount: 4,
       mergedPullRequestsTotalCount: 1,
       closedPullRequestsTotalCount: 1,
       openPullRequestsTotalCount: 3,
@@ -69,6 +70,6 @@ describe("PullRequestStatsRepository", () => {
     expect(updated?.cohortSnapshotSourceId).toBe(newSnapshotId);
 
     const counts = await statsRepository.listCohortPullRequestCounts(newSnapshotId);
-    expect(counts).toEqual([5]);
+    expect(counts).toEqual([4]);
   });
 });
