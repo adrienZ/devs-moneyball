@@ -1,7 +1,6 @@
 import { defineEventHandler } from "h3";
 import { ofetch } from "ofetch";
-import { useDrizzle } from "~~/database/client";
-import { snapshots, snapshotNames } from "~~/database/schema";
+import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
 
 export default defineEventHandler(async () => {
   const html = await ofetch<string>("https://stars.github.com/profiles/");
@@ -24,28 +23,11 @@ export default defineEventHandler(async () => {
     names,
   };
 
-  const db = useDrizzle();
-  // Insert into DB
-  const snapshotId = await db.transaction(async (tx) => {
-    const [snap] = await tx
-      .insert(snapshots)
-      .values({
-        count: payload.count,
-      })
-      .returning();
-
-    if (!snap) throw new Error("Failed to insert snapshot");
-
-    await tx.insert(snapshotNames).values(
-      payload.names.map((name, i) => ({
-        snapshotId: snap.id,
-        name,
-        position: i,
-        createdAt: payload.timestamp,
-      })),
-    );
-
-    return snap.id;
+  const snapshotRepository = SnapshotRepository.getInstance();
+  const snapshotId = await snapshotRepository.createSnapshotWithNames({
+    count: payload.count,
+    names: payload.names,
+    timestamp: payload.timestamp,
   });
 
   return {

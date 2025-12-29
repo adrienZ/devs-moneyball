@@ -7,6 +7,9 @@ dist
 
 .data/*
 !.data/.gitkeep
+!.data/tests/
+.data/tests/*
+!.data/tests/.gitkeep
 
 # Node dependencies
 node_modules

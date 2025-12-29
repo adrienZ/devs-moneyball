@@ -1,12 +1,8 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { desc, eq } from "drizzle-orm";
-import { useDrizzle } from "~~/database/client";
-import {
-  developper,
-  githubPullRequestStats,
-  snapshots,
-} from "~~/database/schema";
 import { ratePullRequestFrequency } from "~~/server/core/ratings/pullRequestFrequency";
+import { DeveloperRepository } from "~~/server/repositories/developerRepository";
+import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
+import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 
 type RatingCriterion = {
@@ -28,15 +24,10 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const db = useDrizzle();
-
-  const developerRecord = await db
-    .select()
-    .from(developper)
-    .where(eq(developper.username, username))
-    .limit(1);
-
-  const developerRow = developerRecord.at(0);
+  const developerRepository = DeveloperRepository.getInstance();
+  const snapshotRepository = SnapshotRepository.getInstance();
+  const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
+  const developerRow = await developerRepository.findByUsername(username);
   if (!developerRow) {
     throw createError({
       statusCode: 404,
@@ -44,25 +35,17 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const stats = await ensurePullRequestStats(db, developerRow);
+  const stats = await ensurePullRequestStats(developerRow);
   if (!stats) {
     throw createError({ statusCode: 404, message: "User not found" });
   }
 
-  const latestSnapshot = await db
-    .select({ id: snapshots.id })
-    .from(snapshots)
-    .orderBy(desc(snapshots.createdAt))
-    .limit(1)
-    .then(rows => rows.at(0));
+  const latestSnapshot = await snapshotRepository.findLatest();
 
   let cohortCounts: number[] = [];
   if (latestSnapshot) {
-    cohortCounts = await db
-      .select({ total: githubPullRequestStats.pullRequestsTotalCount })
-      .from(githubPullRequestStats)
-      .where(eq(githubPullRequestStats.cohortSnapshotSourceId, latestSnapshot.id))
-      .then(rows => rows.map(row => row.total));
+    cohortCounts = await pullRequestStatsRepository
+      .listCohortPullRequestCounts(latestSnapshot.id);
   }
 
   const pullRequestFrequency = cohortCounts.length > 0

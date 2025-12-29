@@ -2,12 +2,11 @@ import { defineTask } from "nitropack/runtime";
 import { getGithubClient } from "~~/server/githubClient";
 import { parse } from "graphql";
 import { nanoid } from "nanoid";
-import { developper, snapshots } from "~~/database/schema";
-import { useDrizzle } from "~~/database/client";
-import { inArray, desc } from "drizzle-orm";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 import type { PullRequestStatsResponse } from "~~/server/services/pullRequestStatsService";
 import { z } from "zod";
+import { DeveloperRepository } from "~~/server/repositories/developerRepository";
+import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
 
 interface CohortUser {
   id: string;
@@ -51,19 +50,15 @@ export default defineTask({
     description: "Fetch and store a new cohort snapshot",
   },
   async run({ payload }) {
-    const db = useDrizzle();
+    const snapshotRepository = SnapshotRepository.getInstance();
+    const developerRepository = DeveloperRepository.getInstance();
 
     const safePayload = payloadSchema.parse(payload);
 
     if (safePayload.msDuration) {
       const durationMs = safePayload.msDuration;
 
-      const lastSnapshot = await db
-        .select()
-        .from(snapshots)
-        .orderBy(desc(snapshots.createdAt))
-        .limit(1)
-        .then(rows => rows.at(0));
+      const lastSnapshot = await snapshotRepository.findLatest();
 
       if (lastSnapshot) {
         const lastTime = new Date(lastSnapshot.createdAt).getTime();
@@ -94,16 +89,13 @@ export default defineTask({
       bio: user.bio,
     }));
 
-    const insertedDevs = await db.insert(developper).values(rows).returning().onConflictDoNothing();
+    const insertedDevs = await developerRepository.insertMany(rows);
 
-    const developers = await db
-      .select()
-      .from(developper)
-      .where(inArray(developper.username, names));
+    const developers = await developerRepository.listByUsernames(names);
 
     const pullRequestStats = (
       await Promise.all(
-        developers.map(developer => ensurePullRequestStats(db, developer, {
+        developers.map(developer => ensurePullRequestStats(developer, {
           cohortSnapshotSourceId: snapshotId,
         })),
       )
