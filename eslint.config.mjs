@@ -9,6 +9,6 @@ export default withNuxt([
     },
   },
   {
-    ignores: ["codegen/yolo/*.ts", "codegen/codegen-output.ts"],
+    ignores: ["codegen/*"],
   },
 ]);

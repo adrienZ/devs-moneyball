@@ -1,57 +1,8 @@
 import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
-import { graphql } from "~~/codegen";
 import { nanoid } from "nanoid";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
-
-const query = graphql(/* GraphQL */ `
-  query GetUserInfo($login: String!) {
-    user(login: $login) {
-      login
-      id
-      avatarUrl
-      followers {
-        totalCount
-      }
-      following {
-        totalCount
-      }
-      repositories(first: 100, privacy: PUBLIC) {
-        totalCount
-        nodes {
-          stargazerCount
-          forkCount
-          primaryLanguage { name }
-        }
-      }
-      repositoriesContributedTo(
-        first: 100
-        privacy: PUBLIC
-        includeUserRepositories: false
-        contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
-      ) {
-        totalCount
-        nodes {
-          nameWithOwner
-          url
-          stargazerCount
-          forkCount
-          primaryLanguage { name }
-          owner {
-            __typename
-            login
-            ... on Organization { name }
-          }
-        }
-      }
-      gists(privacy: PUBLIC) {
-        totalCount
-      }
-      createdAt
-      bio
-    }
-  }
-`);
+import { getUserInfoQuery } from "~~/server/graphql/getUserInfo.gql";
 
 export default defineEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
@@ -59,7 +10,7 @@ export default defineEventHandler(async (event) => {
     throw createError("Missing login");
   }
 
-  const { user: githubUser } = await getGithubClient().call(query, { login });
+  const { user: githubUser } = await getGithubClient().call(getUserInfoQuery, { login });
   if (!githubUser) {
     throw createError("user not found");
   }

@@ -18,11 +18,11 @@ import { myFunction } from "#imports"
 If you can use explicit dependecies (for example vue > #imports)
 
 ---
+
 Always try to reduce diffs unless absolutely needed.
 DO NOT USE THE ANY TYPE IN TYPESCRIPT
 
-
---- 
+---
 
 for formatting run the command
 ```bash
@@ -34,3 +34,7 @@ Use the repository pattern for database access:
 - Do not call `useDrizzle()` directly in handlers/services/tasks; use repository singletons instead.
 - Repositories should encapsulate Drizzle queries and obtain the DB via `useDrizzle()` internally.
 Repository access is via singleton classes, so use `Repository.getInstance()` in consumers.
+
+---
+
+If you edit graphql query, please use `pnpm codegen` afterwise.
