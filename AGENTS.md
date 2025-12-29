@@ -37,4 +37,4 @@ Repository access is via singleton classes, so use `Repository.getInstance()` in
 
 ---
 
-If you edit graphql query, please use `pnpm codegen` afterwise.
+If you edit graphql query, DO NOT EDIT FILES IN THE CODEGEN FOLDER,  please use `pnpm codegen` instead.

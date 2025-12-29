@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAsyncData } from "nuxt/app";
+import { useAsyncData, useLazyAsyncData } from "nuxt/app";
 import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
@@ -49,7 +49,7 @@ const { data: user, pending: loading, error } = useAsyncData(
   () => $fetch(`/api/github/users/${githubId}`),
 );
 
-const { data: contributions } = useAsyncData(
+const { data: contributions } = useLazyAsyncData(
   "user-contributions",
   () => $fetch<PullRequestItem[]>(
     `/api/github/users/${githubId}/contributions`,
@@ -59,7 +59,7 @@ const { data: contributions } = useAsyncData(
   },
 );
 
-const { data: pullRequests } = useAsyncData<PullRequestsStats | null>(
+const { data: pullRequestsStats } = useAsyncData<PullRequestsStats | null>(
   "user-pull-requests",
   () => $fetch<PullRequestsStats>(
     `/api/github/users/pull-requests/${githubId}`,
@@ -123,14 +123,14 @@ const rows = computed(() => {
 });
 
 const pullRequestsRows = computed(() => {
-  if (!pullRequests.value) return [] as Array<{ metric: string; value: number }>;
+  if (!pullRequestsStats.value) return [] as Array<{ metric: string; value: number }>;
   return [
-    { metric: "Total PRs", value: pullRequests.value.pullRequests.totalCount },
-    { metric: "Merged PRs", value: pullRequests.value.mergedPullRequests.totalCount },
-    { metric: "Open PRs", value: pullRequests.value.openPullRequests.totalCount },
-    { metric: "Closed PRs", value: pullRequests.value.closedPullRequests.totalCount },
-    { metric: "PR Contributions", value: pullRequests.value.contributionsCollection.totalPullRequestContributions },
-    { metric: "PR Reviews", value: pullRequests.value.contributionsCollection.totalPullRequestReviewContributions },
+    { metric: "Total PRs", value: pullRequestsStats.value.pullRequests.totalCount },
+    { metric: "Merged PRs", value: pullRequestsStats.value.mergedPullRequests.totalCount },
+    { metric: "Open PRs", value: pullRequestsStats.value.openPullRequests.totalCount },
+    { metric: "Closed PRs", value: pullRequestsStats.value.closedPullRequests.totalCount },
+    { metric: "PR Contributions", value: pullRequestsStats.value.contributionsCollection.totalPullRequestContributions },
+    { metric: "PR Reviews", value: pullRequestsStats.value.contributionsCollection.totalPullRequestReviewContributions },
   ];
 });
 
@@ -309,7 +309,7 @@ const tabsItems = shallowRef<TabsItem[]>([
             </UCard>
 
             <!-- Pull Requests Stats Table -->
-            <UCard v-if="pullRequests">
+            <UCard v-if="pullRequestsStats">
               <template #header>
                 <h3 class="text-lg font-bold">
                   Pull Requests
