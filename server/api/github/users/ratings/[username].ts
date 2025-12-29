@@ -1,14 +1,22 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { ratePullRequestFrequency } from "~~/server/core/ratings/pullRequestFrequency";
+import {
+  buildPullRequestFrequencySeries,
+  defaultPullRequestFrequencyConfig,
+  ratePullRequestFrequency,
+  type PullRequestFrequencySeries,
+} from "~~/server/core/ratings/pullRequestFrequency";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
-import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
+import { fetchMergedPullRequests, ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
 
 type RatingCriterion = {
   code: string;
   label: string;
   value: number | null;
+  details?: {
+    pullRequestFrequency?: PullRequestFrequencySeries;
+  };
 };
 
 function percentileToTwentyScale(percentile: number): number {
@@ -40,6 +48,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: "User not found" });
   }
 
+  const mergedPullRequests = await fetchMergedPullRequests(developerRow.username);
+  const pullRequestFrequencySeries = buildPullRequestFrequencySeries(
+    mergedPullRequests.map(pullRequest => pullRequest.mergedAt),
+    defaultPullRequestFrequencyConfig,
+  );
+
   const latestSnapshot = await snapshotRepository.findLatest();
 
   let cohortCounts: number[] = [];
@@ -50,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
   const pullRequestFrequency = cohortCounts.length > 0
     ? percentileToTwentyScale(ratePullRequestFrequency({
-        userPullRequests: stats.pullRequests.totalCount,
+        userPullRequests: pullRequestFrequencySeries.effectiveCount,
         cohortCounts,
       }))
     : null;
@@ -60,6 +74,9 @@ export default defineEventHandler(async (event) => {
       code: "A1",
       label: "Pull request frequency percentile",
       value: pullRequestFrequency,
+      details: {
+        pullRequestFrequency: pullRequestFrequencySeries,
+      },
     },
   ];
 

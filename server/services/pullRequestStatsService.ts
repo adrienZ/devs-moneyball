@@ -4,6 +4,7 @@ import { getGithubClient } from "~~/server/githubClient";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
 import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
+import { buildPullRequestFrequencySeries, defaultPullRequestFrequencyConfig } from "~~/server/core/ratings/pullRequestFrequency";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
@@ -24,6 +25,7 @@ export type PullRequestStatsResponse = {
     totalPullRequestReviewContributions: number;
   };
   pullRequests: { totalCount: number };
+  pullRequestsWeeklyFrequencyCount: number;
   mergedPullRequests: { totalCount: number };
   closedPullRequests: { totalCount: number };
   openPullRequests: { totalCount: number };
@@ -41,6 +43,7 @@ function mapRecordToResponse(
       totalPullRequestReviewContributions: record.totalPullRequestReviewContributions,
     },
     pullRequests: { totalCount: record.pullRequestsTotalCount },
+    pullRequestsWeeklyFrequencyCount: record.pullRequestsWeeklyFrequencyCount,
     mergedPullRequests: { totalCount: record.mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: record.closedPullRequestsTotalCount },
     openPullRequests: { totalCount: record.openPullRequestsTotalCount },
@@ -51,6 +54,7 @@ function mapApiUserToDb(
   user: PullRequestsUser,
   developerId: string,
   mergedPullRequestsTotalCount: number,
+  pullRequestsWeeklyFrequencyCount: number,
 ): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
   return {
@@ -58,6 +62,7 @@ function mapApiUserToDb(
     totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
     totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
     pullRequestsTotalCount: user.pullRequests.totalCount,
+    pullRequestsWeeklyFrequencyCount,
     mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
     openPullRequestsTotalCount: user.openPullRequests.totalCount,
@@ -73,6 +78,7 @@ function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
   mergedPullRequestsTotalCount: number,
+  pullRequestsWeeklyFrequencyCount: number,
 ): PullRequestStatsResponse {
   return {
     login,
@@ -82,6 +88,7 @@ function mapApiUserToResponse(
       totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
     },
     pullRequests: { totalCount: user.pullRequests.totalCount },
+    pullRequestsWeeklyFrequencyCount,
     mergedPullRequests: { totalCount: mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: user.closedPullRequests.totalCount },
     openPullRequests: { totalCount: user.openPullRequests.totalCount },
@@ -98,12 +105,17 @@ function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedP
   return !!node && node.__typename === "PullRequest";
 }
 
-async function fetchMergedPullRequestsCount(login: string): Promise<number> {
+type MergedPullRequest = {
+  createdAt: string;
+  mergedAt: string;
+};
+
+export async function fetchMergedPullRequests(login: string): Promise<MergedPullRequest[]> {
   const githubClient = getGithubClient();
   const sinceDate = getFiveYearsAgoDate();
   const query = `is:pr author:${login} merged:>=${sinceDate}`;
   let after: string | null = null;
-  let total = 0;
+  const mergedPullRequests: MergedPullRequest[] = [];
 
   do {
     // FIXME: codegen infer is broken for some reason here
@@ -113,10 +125,19 @@ async function fetchMergedPullRequestsCount(login: string): Promise<number> {
     });
 
     const nodes = resp.search.nodes ?? [];
-    total += nodes
+    nodes
       .filter(isPullRequestNode)
       .filter(node => node.repository.owner.login === login)
-      .length;
+      .forEach((node) => {
+        if (!node.mergedAt) {
+          return;
+        }
+
+        mergedPullRequests.push({
+          createdAt: node.createdAt,
+          mergedAt: node.mergedAt,
+        });
+      });
 
     after = resp.search.pageInfo.endCursor ?? null;
     if (!resp.search.pageInfo.hasNextPage) {
@@ -124,7 +145,7 @@ async function fetchMergedPullRequestsCount(login: string): Promise<number> {
     }
   } while (after);
 
-  return total;
+  return mergedPullRequests;
 }
 
 export async function ensurePullRequestStats(
@@ -157,9 +178,20 @@ export async function ensurePullRequestStats(
     return null;
   }
 
-  const mergedPullRequestsTotalCount = await fetchMergedPullRequestsCount(user.login);
+  const mergedPullRequests = await fetchMergedPullRequests(user.login);
+  const mergedPullRequestsTotalCount = mergedPullRequests.length;
+  const frequencySeries = buildPullRequestFrequencySeries(
+    mergedPullRequests.map(pullRequest => pullRequest.mergedAt),
+    defaultPullRequestFrequencyConfig,
+  );
+  const pullRequestsWeeklyFrequencyCount = frequencySeries.effectiveCount;
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount),
+    ...mapApiUserToDb(
+      user,
+      developer.id,
+      mergedPullRequestsTotalCount,
+      pullRequestsWeeklyFrequencyCount,
+    ),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const savedRecord = await pullRequestStatsRepository.upsert(values);
@@ -168,5 +200,10 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount);
+  return mapApiUserToResponse(
+    user,
+    developer.username,
+    mergedPullRequestsTotalCount,
+    pullRequestsWeeklyFrequencyCount,
+  );
 }

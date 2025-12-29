@@ -84,6 +84,9 @@ export const githubPullRequestStats = pgTable(
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
     pullRequestsTotalCount: integer().notNull(),
+    pullRequestsWeeklyFrequencyCount: integer()
+      .default(0)
+      .notNull(), // default keeps existing rows valid when the column is added
     mergedPullRequestsTotalCount: integer().notNull(),
     closedPullRequestsTotalCount: integer().notNull(),
     openPullRequestsTotalCount: integer().notNull(),
