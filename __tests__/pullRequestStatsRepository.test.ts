@@ -4,9 +4,10 @@ import { createTestDb } from "./helpers/pgliteTestDb";
 
 let dbSetup: Awaited<ReturnType<typeof createTestDb>>;
 
-beforeEach(async () => {
+beforeEach(async ({ task }) => {
   vi.resetModules();
-  dbSetup = await createTestDb("pullRequestStatsRepository");
+  const suiteName = task.parent?.name ?? "pullRequestStatsRepository";
+  dbSetup = await createTestDb(`${suiteName}-${task.name}`);
   vi.doMock("../database/client", () => ({
     useDrizzle: () => dbSetup.db,
   }));

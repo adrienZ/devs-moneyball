@@ -11,8 +11,7 @@ type TestDbSetup = {
 };
 
 export async function createTestDb(name: string): Promise<TestDbSetup> {
-  const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? process.cwd();
-  const baseDir = path.join(homeDir, ".data", name);
+  const baseDir = path.resolve(__dirname, "../../..", ".data", name);
   const dataDir = path.join(baseDir, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   await fs.mkdir(dataDir, { recursive: true });
   const client = new PGlite(dataDir);
