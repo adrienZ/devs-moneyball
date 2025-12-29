@@ -106,25 +106,6 @@ export default defineEventHandler(async (event) => {
   const letter = calculateLetter(devScore);
   const summary = shortSummary(letter);
 
-  // Pros/cons auto-generation
-  const pros: string[] = [];
-  const cons: string[] = [];
-
-  if (impactScore > 70) pros.push("Contributed to high-profile repositories");
-  else cons.push("Low overall repository impact");
-
-  if (activityScore > 60) pros.push("High sustained contribution rate");
-  else cons.push("Limited recent public repository activity");
-
-  if (breadthScore > 50) pros.push("Broad language expertise");
-  else cons.push("Narrow technology focus");
-
-  if (collaborationScore > 70) pros.push("Strong collaboration indicators");
-  else cons.push("Collaboration signals could be improved");
-
-  if (qualityScore > 65) pros.push("Solid code quality indicators");
-  else cons.push("Code quality signals need improvement");
-
   return {
     login: data.login,
     followers: data.followers,
@@ -148,7 +129,5 @@ export default defineEventHandler(async (event) => {
       breadth: breadthScore,
       quality: qualityScore,
     },
-    pros,
-    cons,
   };
 });

@@ -280,48 +280,14 @@ const tabsItems = shallowRef<TabsItem[]>([
               </div>
             </UCard>
 
-            <!-- Pros -->
+            <!-- Key Metrics Table -->
             <UCard>
               <template #header>
-                <h3 class="text-lg font-bold mb-2">
-                  Pros
+                <h3 class="text-lg font-bold">
+                  Key Metrics
                 </h3>
               </template>
-              <ul class="space-y-2">
-                <li
-                  v-for="pro in user?.pros"
-                  :key="pro"
-                  class="flex items-center"
-                >
-                  <UIcon
-                    name="i-heroicons-check-circle-solid"
-                    class="text-green-500 mr-2"
-                  />
-                  <span class="text-green-700">{{ pro }}</span>
-                </li>
-              </ul>
-            </UCard>
-
-            <!-- Cons -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold mb-2">
-                  Cons
-                </h3>
-              </template>
-              <ul class="space-y-2">
-                <li
-                  v-for="con in user?.cons"
-                  :key="con"
-                  class="flex items-center"
-                >
-                  <UIcon
-                    name="i-heroicons-x-circle-solid"
-                    class="text-red-500 mr-2"
-                  />
-                  <span class="text-red-700">{{ con }}</span>
-                </li>
-              </ul>
+              <UTable :data="rows" />
             </UCard>
           </div>
 
@@ -340,16 +306,6 @@ const tabsItems = shallowRef<TabsItem[]>([
                   :dark="true"
                 />
               </div>
-            </UCard>
-
-            <!-- Key Metrics Table -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Key Metrics
-                </h3>
-              </template>
-              <UTable :data="rows" />
             </UCard>
 
             <!-- Pull Requests Stats Table -->
