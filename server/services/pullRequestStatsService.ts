@@ -33,8 +33,35 @@ const pullRequestsQuery = graphql(/* GraphQL */ `
   }
 `);
 
+const mergedPullRequestsQuery = graphql(/* GraphQL */ `
+  query SearchMergedPullRequests($q: String!, $after: String) {
+    search(query: $q, type: ISSUE, first: 100, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ... on PullRequest {
+          __typename
+          createdAt
+          mergedAt
+          number
+          repository {
+            owner {
+              login
+            }
+          }
+        }
+      }
+    }
+  }
+`);
+
 type PullRequestsQueryResult = DocumentType<typeof pullRequestsQuery>;
 type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
+type MergedPullRequestsQueryResult = DocumentType<typeof mergedPullRequestsQuery>;
+type MergedPullRequestsSearch = MergedPullRequestsQueryResult["search"];
+type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["nodes"]>[number]>;
 
 export type PullRequestStatsResponse = {
   login: string;
@@ -67,14 +94,18 @@ function mapRecordToResponse(
   };
 }
 
-function mapApiUserToDb(user: PullRequestsUser, developerId: string): PullRequestStatsInsert {
+function mapApiUserToDb(
+  user: PullRequestsUser,
+  developerId: string,
+  mergedPullRequestsTotalCount: number,
+): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
   return {
     developerId,
     totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
     totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
     pullRequestsTotalCount: user.pullRequests.totalCount,
-    mergedPullRequestsTotalCount: user.mergedPullRequests.totalCount,
+    mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
     openPullRequestsTotalCount: user.openPullRequests.totalCount,
     updatedAt: nowIso,
@@ -88,6 +119,7 @@ type PullRequestStatsOptions = {
 function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
+  mergedPullRequestsTotalCount: number,
 ): PullRequestStatsResponse {
   return {
     login,
@@ -97,10 +129,48 @@ function mapApiUserToResponse(
       totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
     },
     pullRequests: { totalCount: user.pullRequests.totalCount },
-    mergedPullRequests: { totalCount: user.mergedPullRequests.totalCount },
+    mergedPullRequests: { totalCount: mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: user.closedPullRequests.totalCount },
     openPullRequests: { totalCount: user.openPullRequests.totalCount },
   };
+}
+
+function getFiveYearsAgoDate(): string {
+  const now = new Date();
+  now.setFullYear(now.getFullYear() - 5);
+  return now.toISOString().split("T")[0];
+}
+
+function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode {
+  return !!node && node.__typename === "PullRequest";
+}
+
+async function fetchMergedPullRequestsCount(login: string): Promise<number> {
+  const githubClient = getGithubClient();
+  const sinceDate = getFiveYearsAgoDate();
+  const query = `is:pr author:${login} merged:>=${sinceDate}`;
+  let after: string | null = null;
+  let total = 0;
+
+  do {
+    const resp = await githubClient.call(mergedPullRequestsQuery, {
+      q: query,
+      after,
+    });
+
+    const nodes = resp.search.nodes ?? [];
+    total += nodes
+      .filter(isPullRequestNode)
+      .filter((node) => node.repository.owner.login === login)
+      .length;
+
+    after = resp.search.pageInfo.endCursor;
+    if (!resp.search.pageInfo.hasNextPage) {
+      break;
+    }
+  } while (after);
+
+  return total;
 }
 
 export async function ensurePullRequestStats(
@@ -133,8 +203,9 @@ export async function ensurePullRequestStats(
     return null;
   }
 
+  const mergedPullRequestsTotalCount = await fetchMergedPullRequestsCount(user.login);
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id),
+    ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const savedRecord = await pullRequestStatsRepository.upsert(values);
@@ -143,5 +214,5 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username);
+  return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount);
 }
