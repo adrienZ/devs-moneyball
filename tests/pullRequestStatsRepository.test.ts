@@ -2,20 +2,15 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createTestDb } from "./helpers/pgliteTestDb";
 
-let dbSetup: Awaited<ReturnType<typeof createTestDb>>;
-
 beforeEach(async ({ task }) => {
   vi.resetModules();
-  const suiteName = task.parent?.name ?? "pullRequestStatsRepository";
-  dbSetup = await createTestDb(`${suiteName}-${task.name}`);
+  const dbSetup = await createTestDb(task.file.filepath);
+
   vi.doMock("../database/client", () => ({
     useDrizzle: () => dbSetup.db,
   }));
 });
 
-afterEach(async () => {
-  await dbSetup.cleanup();
-});
 
 describe("PullRequestStatsRepository", () => {
   it("upserts stats and lists cohort counts", async () => {

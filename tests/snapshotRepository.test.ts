@@ -1,19 +1,13 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { createTestDb } from "./helpers/pgliteTestDb";
 
-let dbSetup: Awaited<ReturnType<typeof createTestDb>>;
-
 beforeEach(async ({ task }) => {
   vi.resetModules();
-  const suiteName = task.parent?.name ?? "snapshotRepository";
-  dbSetup = await createTestDb(`${suiteName}-${task.name}`);
+  const dbSetup = await createTestDb(task.file.filepath);
+
   vi.doMock("../database/client", () => ({
     useDrizzle: () => dbSetup.db,
   }));
-});
-
-afterEach(async () => {
-  await dbSetup.cleanup();
 });
 
 describe("SnapshotRepository", () => {

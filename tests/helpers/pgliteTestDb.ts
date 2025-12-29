@@ -10,20 +10,23 @@ type TestDbSetup = {
   cleanup: () => Promise<void>;
 };
 
-export async function createTestDb(name: string): Promise<TestDbSetup> {
-  const baseDir = path.resolve(__dirname, "../../..", ".data", name);
-  const dataDir = path.join(baseDir, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  await fs.mkdir(dataDir, { recursive: true });
-  const client = new PGlite(dataDir);
+export async function createTestDb(testFilenamePath: string): Promise<TestDbSetup> {
+  const testName = path.basename(testFilenamePath, path.extname(testFilenamePath));
+  const dbDir = path.resolve(__dirname, "../..", ".data/tests", `${testName}`);
+
+  await cleanup();
+  const client = new PGlite(dbDir);
   const db = drizzlePglite({ client, schema, logger: false });
   await migrate(db, {
     migrationsFolder: path.resolve(process.cwd(), "database/migrations"),
   });
 
+  async function cleanup() {
+    await fs.rm(dbDir, { recursive: true, force: true });
+  }
+
   return {
     db,
-    cleanup: async () => {
-      await fs.rm(dataDir, { recursive: true, force: true });
-    },
+    cleanup,
   };
 }
