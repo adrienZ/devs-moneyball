@@ -29,20 +29,6 @@
       "when": 1760775914319,
       "tag": "0003_add_cohort_snapshot_source_to_pr_stats",
       "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1762000000000,
-      "tag": "0004_add_pull_request_frequency_count",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1762000001000,
-      "tag": "0005_rename_pull_request_frequency_count",
-      "breakpoints": true
     }
   ]
 }

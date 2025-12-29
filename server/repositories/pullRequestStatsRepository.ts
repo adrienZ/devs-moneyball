@@ -63,7 +63,7 @@ export class PullRequestStatsRepository {
 
   async listCohortPullRequestCounts(snapshotId: string): Promise<number[]> {
     return this.db
-      .select({ total: githubPullRequestStats.pullRequestsWeeklyFrequencyCount })
+      .select({ total: githubPullRequestStats.pullRequestsTotalCount })
       .from(githubPullRequestStats)
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId))
       .then(rows => rows.map(row => row.total));
