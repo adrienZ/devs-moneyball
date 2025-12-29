@@ -161,7 +161,7 @@ async function fetchMergedPullRequestsCount(login: string): Promise<number> {
     const nodes = resp.search.nodes ?? [];
     total += nodes
       .filter(isPullRequestNode)
-      .filter((node) => node.repository.owner.login === login)
+      .filter(node => node.repository.owner.login === login)
       .length;
 
     after = resp.search.pageInfo.endCursor;
