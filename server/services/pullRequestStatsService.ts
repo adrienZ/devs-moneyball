@@ -2,8 +2,8 @@ import type { DocumentType } from "../../codegen";
 import type { developper, githubPullRequestStats } from "~~/database/schema";
 import { getGithubClient } from "~~/server/githubClient";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
-import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats";
-import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests";
+import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
+import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;

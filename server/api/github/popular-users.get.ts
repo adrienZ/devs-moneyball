@@ -2,7 +2,7 @@ import type { ResultOf } from "@graphql-typed-document-node/core";
 import { defineEventHandler, getQuery } from "h3";
 import { z } from "zod";
 import { getGithubClient } from "~~/server/githubClient";
-import { popularUsersQuery } from "~~/server/graphql/popularUsers";
+import { popularUsersQuery } from "~~/server/graphql/popularUsers.gql";
 
 const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
 

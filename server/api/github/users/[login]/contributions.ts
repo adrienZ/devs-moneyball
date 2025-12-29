@@ -1,7 +1,7 @@
 import type { H3Event } from "h3";
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
-import { searchMergedExternalPRsQuery } from "~~/server/graphql/searchMergedExternalPRs";
+import { searchMergedExternalPRsQuery } from "~~/server/graphql/searchMergedExternalPRs.gql";
 
 interface PullRequest {
   title: string;

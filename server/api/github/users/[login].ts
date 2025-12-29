@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, createError } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
 import { nanoid } from "nanoid";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
-import { getUserInfoQuery } from "~~/server/graphql/getUserInfo";
+import { getUserInfoQuery } from "~~/server/graphql/getUserInfo.gql";
 
 export default defineEventHandler(async (event) => {
   const login = getRouterParam(event, "login");
