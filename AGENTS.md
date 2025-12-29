@@ -28,3 +28,8 @@ for formatting run the command
 ```bash
 pnpm run lint --fix
 ```
+
+---
+Use the repository pattern for database access:
+- Do not call `useDrizzle()` directly in handlers/services/tasks; use repository singletons instead.
+- Repositories should encapsulate Drizzle queries and obtain the DB via `useDrizzle()` internally.

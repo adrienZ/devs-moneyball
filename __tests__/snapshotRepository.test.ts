@@ -1,38 +1,18 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import path from "node:path";
-import os from "node:os";
-import fs from "node:fs/promises";
-import * as schema from "../database/schema";
+import { createTestDb } from "./helpers/pgliteTestDb";
 
-let db: ReturnType<typeof drizzlePglite>;
-let dataDir: string;
-
-async function setupDb() {
-  const baseDir = path.join(os.homedir(), ".data", "snapshotRepository");
-  dataDir = path.join(baseDir, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  await fs.mkdir(dataDir, { recursive: true });
-  const client = new PGlite(dataDir);
-  db = drizzlePglite({ client, schema, logger: false });
-  await migrate(db, {
-    migrationsFolder: path.resolve(process.cwd(), "database/migrations"),
-  });
-}
+let dbSetup: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
   vi.resetModules();
-  await setupDb();
+  dbSetup = await createTestDb("snapshotRepository");
   vi.doMock("../database/client", () => ({
-    useDrizzle: () => db,
+    useDrizzle: () => dbSetup.db,
   }));
 });
 
 afterEach(async () => {
-  if (dataDir) {
-    await fs.rm(dataDir, { recursive: true, force: true });
-  }
+  await dbSetup.cleanup();
 });
 
 describe("SnapshotRepository", () => {
