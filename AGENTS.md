@@ -38,3 +38,8 @@ Repository access is via singleton classes, so use `Repository.getInstance()` in
 ---
 
 If you edit graphql query, DO NOT EDIT FILES IN THE CODEGEN FOLDER,  please use `pnpm codegen` instead.
+
+
+---
+
+Avoid large files, use #region comments if you have to.

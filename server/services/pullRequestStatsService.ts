@@ -1,21 +1,15 @@
-import type { DocumentType } from "../../codegen";
 import type { developper, githubPullRequestStats } from "~~/database/schema";
-import { getGithubClient } from "~~/server/githubClient";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
-import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
-import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
+import {
+  GithubApiService,
+  type PullRequestsUser,
+} from "~~/server/services/githubApiService";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
 type DeveloperRecord = typeof developper.$inferSelect;
 
-type PullRequestsQueryResult = DocumentType<typeof getPullRequestsStatsQuery>;
-type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
-
-type MergedPullRequestsQueryResult = DocumentType<typeof searchMergedPullRequestsQuery>;
-type MergedPullRequestsSearch = MergedPullRequestsQueryResult["search"];
-type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["nodes"]>[number]>;
-
+// #region Types
 export type PullRequestStatsResponse = {
   login: string;
   name: string | null;
@@ -28,6 +22,40 @@ export type PullRequestStatsResponse = {
   closedPullRequests: { totalCount: number };
   openPullRequests: { totalCount: number };
 };
+
+type PullRequestContributions = {
+  totalPullRequestContributions: number;
+  totalPullRequestReviewContributions: number;
+};
+
+type PullRequestCounts = {
+  pullRequestsTotalCount: number;
+  mergedPullRequestsTotalCount: number;
+  closedPullRequestsTotalCount: number;
+  openPullRequestsTotalCount: number;
+};
+
+type PullRequestStatsOptions = {
+  cohortSnapshotSourceId?: string;
+};
+// #endregion Types
+
+// #region Mappings
+function buildContributionsFromUser(user: PullRequestsUser): PullRequestContributions {
+  return {
+    totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
+    totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
+  };
+}
+
+function buildCountsFromUser(user: PullRequestsUser, mergedPullRequestsTotalCount: number): PullRequestCounts {
+  return {
+    pullRequestsTotalCount: user.pullRequests.totalCount,
+    mergedPullRequestsTotalCount,
+    closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
+    openPullRequestsTotalCount: user.openPullRequests.totalCount,
+  };
+}
 
 function mapRecordToResponse(
   record: PullRequestStatsRecord,
@@ -53,78 +81,66 @@ function mapApiUserToDb(
   mergedPullRequestsTotalCount: number,
 ): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
+  const contributions = buildContributionsFromUser(user);
+  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount);
   return {
     developerId,
-    totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
-    totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
-    pullRequestsTotalCount: user.pullRequests.totalCount,
-    mergedPullRequestsTotalCount,
-    closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
-    openPullRequestsTotalCount: user.openPullRequests.totalCount,
+    totalPullRequestContributions: contributions.totalPullRequestContributions,
+    totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
+    pullRequestsTotalCount: counts.pullRequestsTotalCount,
+    mergedPullRequestsTotalCount: counts.mergedPullRequestsTotalCount,
+    closedPullRequestsTotalCount: counts.closedPullRequestsTotalCount,
+    openPullRequestsTotalCount: counts.openPullRequestsTotalCount,
     updatedAt: nowIso,
   };
 }
-
-type PullRequestStatsOptions = {
-  cohortSnapshotSourceId?: string;
-};
 
 function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
   mergedPullRequestsTotalCount: number,
 ): PullRequestStatsResponse {
+  const contributions = buildContributionsFromUser(user);
+  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount);
   return {
     login,
     name: user.name ?? null,
     contributionsCollection: {
-      totalPullRequestContributions: user.contributionsCollection.totalPullRequestContributions,
-      totalPullRequestReviewContributions: user.contributionsCollection.totalPullRequestReviewContributions,
+      totalPullRequestContributions: contributions.totalPullRequestContributions,
+      totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
     },
-    pullRequests: { totalCount: user.pullRequests.totalCount },
-    mergedPullRequests: { totalCount: mergedPullRequestsTotalCount },
-    closedPullRequests: { totalCount: user.closedPullRequests.totalCount },
-    openPullRequests: { totalCount: user.openPullRequests.totalCount },
+    pullRequests: { totalCount: counts.pullRequestsTotalCount },
+    mergedPullRequests: { totalCount: counts.mergedPullRequestsTotalCount },
+    closedPullRequests: { totalCount: counts.closedPullRequestsTotalCount },
+    openPullRequests: { totalCount: counts.openPullRequestsTotalCount },
   };
 }
+// #endregion Mappings
 
-function getFiveYearsAgoDate(): string {
-  const now = new Date();
-  now.setFullYear(now.getFullYear() - 5);
-  return now.toISOString().split("T")[0] ?? now.toISOString();
-}
+// #region Service
+async function resolveCachedStatsResponse(
+  repository: PullRequestStatsRepository,
+  developer: DeveloperRecord,
+  options: PullRequestStatsOptions,
+): Promise<PullRequestStatsResponse | null> {
+  const cachedRecord = await repository.findByDeveloperId(developer.id);
+  if (!cachedRecord) {
+    return null;
+  }
 
-function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode & { __typename: "PullRequest" } {
-  return !!node && node.__typename === "PullRequest";
-}
+  if (
+    options.cohortSnapshotSourceId
+    && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
+  ) {
+    const updatedRecord = await repository.updateCohortSnapshotSource(
+      developer.id,
+      options.cohortSnapshotSourceId,
+    );
 
-async function fetchMergedPullRequestsCount(login: string): Promise<number> {
-  const githubClient = getGithubClient();
-  const sinceDate = getFiveYearsAgoDate();
-  const query = `is:pr author:${login} merged:>=${sinceDate}`;
-  let after: string | null = null;
-  let total = 0;
+    if (updatedRecord) return mapRecordToResponse(updatedRecord, developer);
+  }
 
-  do {
-    // FIXME: codegen infer is broken for some reason here
-    const resp: MergedPullRequestsQueryResult = await githubClient.call(searchMergedPullRequestsQuery, {
-      q: query,
-      after,
-    });
-
-    const nodes = resp.search.nodes ?? [];
-    total += nodes
-      .filter(isPullRequestNode)
-      .filter(node => node.repository.owner.login === login)
-      .length;
-
-    after = resp.search.pageInfo.endCursor ?? null;
-    if (!resp.search.pageInfo.hasNextPage) {
-      break;
-    }
-  } while (after);
-
-  return total;
+  return mapRecordToResponse(cachedRecord, developer);
 }
 
 export async function ensurePullRequestStats(
@@ -132,32 +148,23 @@ export async function ensurePullRequestStats(
   options: PullRequestStatsOptions = {},
 ): Promise<PullRequestStatsResponse | null> {
   const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
-  const cachedRecord = await pullRequestStatsRepository.findByDeveloperId(developer.id);
-  if (cachedRecord) {
-    if (
-      options.cohortSnapshotSourceId
-      && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
-    ) {
-      const updatedRecord = await pullRequestStatsRepository.updateCohortSnapshotSource(
-        developer.id,
-        options.cohortSnapshotSourceId,
-      );
+  const githubApiService = GithubApiService.getInstance();
+  // 1) Prefer cached stats, update cohort snapshot when requested.
+  const cachedResponse = await resolveCachedStatsResponse(
+    pullRequestStatsRepository,
+    developer,
+    options,
+  );
+  if (cachedResponse) return cachedResponse;
 
-      if (updatedRecord) return mapRecordToResponse(updatedRecord, developer);
-    }
-
-    return mapRecordToResponse(cachedRecord, developer);
-  }
-
-  const { user } = await getGithubClient().call(getPullRequestsStatsQuery, {
-    username: developer.username,
-  });
-
+  // 2) Fetch current totals from GitHub when cache is missing.
+  const user = await githubApiService.fetchPullRequestsUser(developer.username);
   if (!user) {
     return null;
   }
 
-  const mergedPullRequestsTotalCount = await fetchMergedPullRequestsCount(user.login);
+  // 3) Persist totals, return saved record when possible.
+  const mergedPullRequestsTotalCount = await githubApiService.fetchMergedPullRequestsCount(user.login);
   const values: PullRequestStatsInsert = {
     ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
@@ -170,3 +177,4 @@ export async function ensurePullRequestStats(
 
   return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount);
 }
+// #endregion Service

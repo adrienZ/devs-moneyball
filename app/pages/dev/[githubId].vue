@@ -37,8 +37,16 @@ interface RatingsResponse {
   criteria: Array<{
     code: string;
     label: string;
+    description: string;
     value: number | null;
   }>;
+  cohort: {
+    size: number;
+    min: number | null;
+    max: number | null;
+    median: number | null;
+    average: number | null;
+  };
 }
 
 const route = useRoute();
@@ -247,7 +255,9 @@ const tabsItems = shallowRef<TabsItem[]>([
                       {{ criterion.code }}
                     </td>
                     <td class="py-2 pr-4">
-                      {{ criterion.label }}
+                      <UTooltip :text="criterion.description">
+                        <div> {{ criterion.label }}</div>
+                      </UTooltip>
                     </td>
                     <td class="py-2 font-semibold">
                       {{ criterion.value ?? "N/A" }}
@@ -316,6 +326,56 @@ const tabsItems = shallowRef<TabsItem[]>([
                 </h3>
               </template>
               <UTable :data="pullRequestsRows" />
+            </UCard>
+
+            <UCard v-if="ratings?.cohort">
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Cohort Summary (PRs)
+                </h3>
+              </template>
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div class="text-muted">
+                    Size
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.size }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Min
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.min ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Median
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.median ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Max
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.max ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Average
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.average?.toFixed(1) ?? "N/A" }}
+                  </div>
+                </div>
+              </div>
             </UCard>
           </div>
         </div>
