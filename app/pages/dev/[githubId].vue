@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAsyncData } from "nuxt/app";
+import { useAsyncData, useLazyAsyncData } from "nuxt/app";
 import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
 import TheChart from "~/components/TheChart.vue";
@@ -37,8 +37,16 @@ interface RatingsResponse {
   criteria: Array<{
     code: string;
     label: string;
+    description: string;
     value: number | null;
   }>;
+  cohort: {
+    size: number;
+    min: number | null;
+    max: number | null;
+    median: number | null;
+    average: number | null;
+  };
 }
 
 const route = useRoute();
@@ -49,7 +57,7 @@ const { data: user, pending: loading, error } = useAsyncData(
   () => $fetch(`/api/github/users/${githubId}`),
 );
 
-const { data: contributions } = useAsyncData(
+const { data: contributions } = useLazyAsyncData(
   "user-contributions",
   () => $fetch<PullRequestItem[]>(
     `/api/github/users/${githubId}/contributions`,
@@ -59,7 +67,7 @@ const { data: contributions } = useAsyncData(
   },
 );
 
-const { data: pullRequests } = useAsyncData<PullRequestsStats | null>(
+const { data: pullRequestsStats } = useAsyncData<PullRequestsStats | null>(
   "user-pull-requests",
   () => $fetch<PullRequestsStats>(
     `/api/github/users/pull-requests/${githubId}`,
@@ -123,14 +131,14 @@ const rows = computed(() => {
 });
 
 const pullRequestsRows = computed(() => {
-  if (!pullRequests.value) return [] as Array<{ metric: string; value: number }>;
+  if (!pullRequestsStats.value) return [] as Array<{ metric: string; value: number }>;
   return [
-    { metric: "Total PRs", value: pullRequests.value.pullRequests.totalCount },
-    { metric: "Merged PRs", value: pullRequests.value.mergedPullRequests.totalCount },
-    { metric: "Open PRs", value: pullRequests.value.openPullRequests.totalCount },
-    { metric: "Closed PRs", value: pullRequests.value.closedPullRequests.totalCount },
-    { metric: "PR Contributions", value: pullRequests.value.contributionsCollection.totalPullRequestContributions },
-    { metric: "PR Reviews", value: pullRequests.value.contributionsCollection.totalPullRequestReviewContributions },
+    { metric: "Total PRs", value: pullRequestsStats.value.pullRequests.totalCount },
+    { metric: "Merged PRs", value: pullRequestsStats.value.mergedPullRequests.totalCount },
+    { metric: "Open PRs", value: pullRequestsStats.value.openPullRequests.totalCount },
+    { metric: "Closed PRs", value: pullRequestsStats.value.closedPullRequests.totalCount },
+    { metric: "PR Contributions", value: pullRequestsStats.value.contributionsCollection.totalPullRequestContributions },
+    { metric: "PR Reviews", value: pullRequestsStats.value.contributionsCollection.totalPullRequestReviewContributions },
   ];
 });
 
@@ -247,7 +255,9 @@ const tabsItems = shallowRef<TabsItem[]>([
                       {{ criterion.code }}
                     </td>
                     <td class="py-2 pr-4">
-                      {{ criterion.label }}
+                      <UTooltip :text="criterion.description">
+                        <div> {{ criterion.label }}</div>
+                      </UTooltip>
                     </td>
                     <td class="py-2 font-semibold">
                       {{ criterion.value ?? "N/A" }}
@@ -280,48 +290,14 @@ const tabsItems = shallowRef<TabsItem[]>([
               </div>
             </UCard>
 
-            <!-- Pros -->
+            <!-- Key Metrics Table -->
             <UCard>
               <template #header>
-                <h3 class="text-lg font-bold mb-2">
-                  Pros
+                <h3 class="text-lg font-bold">
+                  Key Metrics
                 </h3>
               </template>
-              <ul class="space-y-2">
-                <li
-                  v-for="pro in user?.pros"
-                  :key="pro"
-                  class="flex items-center"
-                >
-                  <UIcon
-                    name="i-heroicons-check-circle-solid"
-                    class="text-green-500 mr-2"
-                  />
-                  <span class="text-green-700">{{ pro }}</span>
-                </li>
-              </ul>
-            </UCard>
-
-            <!-- Cons -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold mb-2">
-                  Cons
-                </h3>
-              </template>
-              <ul class="space-y-2">
-                <li
-                  v-for="con in user?.cons"
-                  :key="con"
-                  class="flex items-center"
-                >
-                  <UIcon
-                    name="i-heroicons-x-circle-solid"
-                    class="text-red-500 mr-2"
-                  />
-                  <span class="text-red-700">{{ con }}</span>
-                </li>
-              </ul>
+              <UTable :data="rows" />
             </UCard>
           </div>
 
@@ -342,24 +318,64 @@ const tabsItems = shallowRef<TabsItem[]>([
               </div>
             </UCard>
 
-            <!-- Key Metrics Table -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Key Metrics
-                </h3>
-              </template>
-              <UTable :data="rows" />
-            </UCard>
-
             <!-- Pull Requests Stats Table -->
-            <UCard v-if="pullRequests">
+            <UCard v-if="pullRequestsStats">
               <template #header>
                 <h3 class="text-lg font-bold">
                   Pull Requests
                 </h3>
               </template>
               <UTable :data="pullRequestsRows" />
+            </UCard>
+
+            <UCard v-if="ratings?.cohort">
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Cohort Summary (PRs)
+                </h3>
+              </template>
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div class="text-muted">
+                    Size
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.size }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Min
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.min ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Median
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.median ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Max
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.max ?? "N/A" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted">
+                    Average
+                  </div>
+                  <div class="font-semibold">
+                    {{ ratings.cohort.average?.toFixed(1) ?? "N/A" }}
+                  </div>
+                </div>
+              </div>
             </UCard>
           </div>
         </div>
