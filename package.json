@@ -2,6 +2,11 @@
   "name": "nuxt-app",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x",
+    "npm": "please-use-pnpm"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host 0.0.0.0",

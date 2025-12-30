@@ -204,7 +204,7 @@ const pageSize = ref(20);
 const after = ref<string | null>(null);
 const cursorStack = ref<Array<string | null>>([]);
 
-const { data: userConfig } = await useAsyncData("user-config", () => {
+const { data: userConfig } = await useAsyncData("user-config", async () => {
   if (import.meta.server && serverEvent) {
     return getUserConfig(serverEvent);
   }
