@@ -122,12 +122,5 @@ export default defineEventHandler(async (event) => {
     devScore,
     letter,
     summary,
-    criteria: {
-      impact: impactScore,
-      activity: activityScore,
-      collaboration: collaborationScore,
-      breadth: breadthScore,
-      quality: qualityScore,
-    },
   };
 });

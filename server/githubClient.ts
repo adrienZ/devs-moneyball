@@ -9,7 +9,7 @@ export function getGithubClient() {
   const client = octo.defaults({
     headers:
     {
-      authorization: `Bearer ${config.public.githubToken}`,
+      authorization: `Bearer ${config.githubToken}`,
     },
   });
 

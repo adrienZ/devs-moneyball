@@ -15,7 +15,7 @@ const querySchema = z.object({
   sortField: z.enum(["followers", "age"]).default("followers"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   languages: z.string().optional(), // comma-separated list
-  page: z.coerce.number().int().nonnegative().default(1),
+  after: z.string().optional(),
   pageSize: z.coerce.number().int().positive().max(50).default(20),
 });
 
@@ -63,23 +63,18 @@ export default defineEventHandler(async (event) => {
   const data = await githubClient.call(popularUsersQuery, {
     q: query,
     pageSize,
+    after: params.after,
   });
 
   type Nodes = NonNullable<ResultOf<typeof popularUsersQuery>["search"]["nodes"]>;
   type User = Extract<Nodes[number], { __typename?: "User" }>;
   const users = data.search.nodes?.filter((u): u is User => !!u);
 
-  // Pagination logic: only needed for skipping pages (not supported by GitHub search API)
-  // For true pagination, you would need to use 'after' cursor, but search API does not support it for users.
-  // So we just return the users as received from the API.
-  const page = params.page;
   const total = data.search.userCount;
-  // No slicing needed, API returns up to pageSize users
   return {
     users,
     total,
-    page,
     pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    pageInfo: data.search.pageInfo,
   };
 });

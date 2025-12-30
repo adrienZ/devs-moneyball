@@ -2,7 +2,6 @@
 import { useAsyncData, useLazyAsyncData } from "nuxt/app";
 import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
-import TheChart from "~/components/TheChart.vue";
 import { UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
 import type { TabsItem, TableColumn } from "@nuxt/ui";
 
@@ -303,21 +302,6 @@ const tabsItems = shallowRef<TabsItem[]>([
 
           <!-- RIGHT PANEL -->
           <div class="lg:col-span-1 space-y-6">
-            <!-- Radar Chart -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Criteria Breakdown
-                </h3>
-              </template>
-              <div class="max-w-md mx-auto">
-                <TheChart
-                  :criteria="user?.criteria"
-                  :dark="true"
-                />
-              </div>
-            </UCard>
-
             <!-- Pull Requests Stats Table -->
             <UCard v-if="pullRequestsStats">
               <template #header>

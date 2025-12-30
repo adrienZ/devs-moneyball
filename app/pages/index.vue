@@ -4,7 +4,7 @@ import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
 import { ref, computed, h, resolveComponent, watch } from "vue";
 import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
-import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu, UPagination } from "#components";
+import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
 import type { LanguageListEntry } from "~~/server/api/languages";
@@ -201,9 +201,18 @@ const serverEvent = useRequestEvent();
 // Pagination state
 const page = ref(1);
 const pageSize = ref(20);
-const totalPages = ref(1);
+const after = ref<string | null>(null);
+const cursorStack = ref<Array<string | null>>([]);
 
-const { data: userConfig } = await useAsyncData("user-config", () => getUserConfig(serverEvent!));
+const { data: userConfig } = await useAsyncData("user-config", () => {
+  if (import.meta.server && serverEvent) {
+    return getUserConfig(serverEvent);
+  }
+  return undefined;
+}, {
+  server: true,
+  default: () => undefined,
+});
 const queryLocation = computed(() => locationInput.value?.name || userConfig.value?.country);
 
 const { data: paginated, pending: loading, error } = await useAsyncData("list", () => $fetch<InternalApi["/api/github/popular-users"]["get"]>("/api/github/popular-users", {
@@ -216,15 +225,27 @@ const { data: paginated, pending: loading, error } = await useAsyncData("list", 
     sortOrder: sortOrder.value,
     location: queryLocation.value,
     languages: selectedLanguages.value.join(","),
-    page: page.value,
+    after: after.value ?? undefined,
     pageSize: pageSize.value,
   },
 }), {
-  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, page, pageSize],
+  watch: [minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, after, pageSize],
 });
 
 const users = computed(() => (paginated.value?.users ?? []) as User[]);
-totalPages.value = paginated.value?.totalPages ?? 1;
+const pageInfo = computed(() => paginated.value?.pageInfo);
+const totalPages = computed(() => {
+  const total = paginated.value?.total ?? 0;
+  return Math.max(1, Math.ceil(total / pageSize.value));
+});
+const canPrev = computed(() => cursorStack.value.length > 0);
+const canNext = computed(() => pageInfo.value?.hasNextPage ?? false);
+
+watch([minFollowers, maxFollowers, minAge, maxAge, sortField, sortOrder, queryLocation, selectedLanguages, pageSize], () => {
+  after.value = null;
+  cursorStack.value = [];
+  page.value = 1;
+});
 
 watch(userConfig, (newConfig) => {
   if (newConfig?.country) {
@@ -304,6 +325,19 @@ const columns = [
 ] satisfies TableColumn<User>[];
 
 const sorting = ref([]);
+
+function goNext() {
+  if (!pageInfo.value?.endCursor) return;
+  cursorStack.value.push(after.value ?? null);
+  after.value = pageInfo.value.endCursor;
+  page.value += 1;
+}
+
+function goPrev() {
+  if (cursorStack.value.length === 0) return;
+  after.value = cursorStack.value.pop() ?? null;
+  page.value = Math.max(1, page.value - 1);
+}
 </script>
 
 <template>
@@ -423,17 +457,24 @@ const sorting = ref([]);
       :columns="columns"
       class="mt-6"
     />
-    <div class="flex justify-center mt-8">
-      <UPagination
-        v-model:page="page"
-        :pageCount="totalPages"
-        :total="paginated?.total ?? 0"
-        :pageSize="pageSize"
-        :showFirstLast="true"
-        :showEdges="true"
-        :showJump="true"
-        class="my-4"
-      />
+    <div class="flex items-center justify-center gap-4 my-8">
+      <UButton
+        variant="soft"
+        :disabled="!canPrev"
+        @click="goPrev"
+      >
+        Previous
+      </UButton>
+      <span class="text-sm text-muted">
+        Page {{ page }} of {{ totalPages }}
+      </span>
+      <UButton
+        variant="soft"
+        :disabled="!canNext"
+        @click="goNext"
+      >
+        Next
+      </UButton>
     </div>
   </div>
 </template>
