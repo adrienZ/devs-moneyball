@@ -40,6 +40,51 @@ function buildUsersQuery(logins: string[]) {
   `;
 }
 
+function chunkLogins(logins: string[], size: number): string[][] {
+  if (size <= 0) return [logins];
+  const chunks: string[][] = [];
+  for (let i = 0; i < logins.length; i += size) {
+    chunks.push(logins.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function isCohortUser(user: CohortUser | null | undefined): user is CohortUser {
+  return !!user;
+}
+
+async function fetchCohortUsers(logins: string[]): Promise<CohortUser[]> {
+  const githubClient = getGithubClient();
+  const chunks = chunkLogins(logins, 50);
+  const users: CohortUser[] = [];
+
+  for (const chunk of chunks) {
+    try {
+      const cohortDevs: Record<string, CohortUser | null> = await githubClient.call(
+        parse(buildUsersQuery(chunk)),
+        {},
+      );
+      users.push(...Object.values(cohortDevs).filter(isCohortUser));
+    }
+    catch {
+      for (const login of chunk) {
+        try {
+          const cohortDevs: Record<string, CohortUser | null> = await githubClient.call(
+            parse(buildUsersQuery([login])),
+            {},
+          );
+          users.push(...Object.values(cohortDevs).filter(isCohortUser));
+        }
+        catch {
+          // Ignore invalid logins and continue.
+        }
+      }
+    }
+  }
+
+  return users;
+}
+
 const payloadSchema = z.object({
   msDuration: z.number().nonnegative().optional(),
 });
@@ -77,11 +122,13 @@ export default defineTask({
       }
     }
 
-    const { names, snapshotId } = await $fetch("/api/getCohort");
+    const { names } = await $fetch("/api/getGithubStarsName");
+    const cohortLogins = names;
 
-    const cohortDevs: Record<string, CohortUser> = await getGithubClient().call(parse(buildUsersQuery(names)), {});
+    const users = await fetchCohortUsers(cohortLogins);
+    const resolvedLogins = users.map(user => user.login);
 
-    const rows = Object.values(cohortDevs).map((user: CohortUser) => ({
+    const rows = users.map(user => ({
       id: nanoid(),
       username: user.login,
       githubId: user.id,
@@ -91,7 +138,12 @@ export default defineTask({
 
     const insertedDevs = await developerRepository.insertMany(rows);
 
-    const developers = await developerRepository.listByUsernames(names);
+    const snapshotId = await snapshotRepository.createSnapshotWithNames({
+      count: resolvedLogins.length,
+      names: resolvedLogins,
+      timestamp: new Date().toISOString(),
+    });
+    const developers = await developerRepository.listByUsernames(resolvedLogins);
 
     const pullRequestStats = (
       await Promise.all(

@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
 import { snapshotNames, snapshots } from "~~/database/schema";
 
@@ -20,11 +20,39 @@ export class SnapshotRepository {
     return useDrizzle();
   }
 
+  private dedupeNames(names: string[]): string[] {
+    const seen = new Set<string>();
+    return names.filter((name) => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }
+
+  async createSnapshot(count: number): Promise<string> {
+    const [snap] = await this.db
+      .insert(snapshots)
+      .values({ count })
+      .returning();
+
+    if (!snap) throw new Error("Failed to insert snapshot");
+    return snap.id;
+  }
+
   async createSnapshotWithNames(input: {
     count: number;
     names: string[];
     timestamp: string;
   }): Promise<string> {
+    const names = this.dedupeNames(input.names);
+    const existing = names.length === 0
+      ? []
+      : await this.db
+          .select({ name: snapshotNames.name })
+          .from(snapshotNames)
+          .where(inArray(snapshotNames.name, names))
+          .then(rows => rows.map(row => row.name));
+    const namesToInsert = names.filter(name => !existing.includes(name));
     const snapshotId = await this.db.transaction(async (tx) => {
       const [snap] = await tx
         .insert(snapshots)
@@ -35,15 +63,17 @@ export class SnapshotRepository {
 
       if (!snap) throw new Error("Failed to insert snapshot");
 
-      if (input.names.length > 0) {
-        await tx.insert(snapshotNames).values(
-          input.names.map((name, i) => ({
-            snapshotId: snap.id,
-            name,
-            position: i,
-            createdAt: input.timestamp,
-          })),
-        );
+      if (namesToInsert.length > 0) {
+        await tx
+          .insert(snapshotNames)
+          .values(
+            namesToInsert.map(name => ({
+              snapshotId: snap.id,
+              name,
+              createdAt: input.timestamp,
+            })),
+          )
+          .onConflictDoNothing({ target: snapshotNames.name });
       }
 
       return snap.id;
@@ -59,5 +89,13 @@ export class SnapshotRepository {
       .orderBy(desc(snapshots.createdAt))
       .limit(1)
       .then(rows => rows.at(0) ?? null);
+  }
+
+  async listNamesBySnapshotId(snapshotId: string): Promise<string[]> {
+    return this.db
+      .select({ name: snapshotNames.name })
+      .from(snapshotNames)
+      .where(eq(snapshotNames.snapshotId, snapshotId))
+      .then(rows => rows.map(row => row.name));
   }
 }

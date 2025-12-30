@@ -31,11 +31,7 @@ describe("PullRequestStatsRepository", () => {
 
     if (!developer) throw new Error("Failed to create developer");
 
-    const snapshotId = await snapshotRepository.createSnapshotWithNames({
-      count: 0,
-      names: [],
-      timestamp: new Date().toISOString(),
-    });
+    const snapshotId = await snapshotRepository.createSnapshot(0);
 
     const saved = await statsRepository.upsert({
       id: randomUUID(),
@@ -55,11 +51,7 @@ describe("PullRequestStatsRepository", () => {
     const fetched = await statsRepository.findByDeveloperId(developer.id);
     expect(fetched?.pullRequestsTotalCount).toBe(5);
 
-    const newSnapshotId = await snapshotRepository.createSnapshotWithNames({
-      count: 0,
-      names: [],
-      timestamp: new Date().toISOString(),
-    });
+    const newSnapshotId = await snapshotRepository.createSnapshot(0);
 
     const updated = await statsRepository.updateCohortSnapshotSource(
       developer.id,

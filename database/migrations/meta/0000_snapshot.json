@@ -1,9 +1,221 @@
 {
-  "id": "366912dc-9f04-4e51-b9ff-95458137eeaa",
+  "id": "edbdb8f7-1757-40be-8cf1-d54643ea4d37",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.developper": {
+      "name": "developper",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "githubId": {
+          "name": "githubId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatarUrl": {
+          "name": "avatarUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "developper_githubId_unique": {
+          "name": "developper_githubId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "githubId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.github_pull_request_stats": {
+      "name": "github_pull_request_stats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "developerId": {
+          "name": "developerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cohortSnapshotSourceId": {
+          "name": "cohortSnapshotSourceId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalPullRequestContributions": {
+          "name": "totalPullRequestContributions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalPullRequestReviewContributions": {
+          "name": "totalPullRequestReviewContributions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pullRequestsTotalCount": {
+          "name": "pullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mergedPullRequestsTotalCount": {
+          "name": "mergedPullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "closedPullRequestsTotalCount": {
+          "name": "closedPullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "openPullRequestsTotalCount": {
+          "name": "openPullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "github_pull_request_stats_developer_id_uk": {
+          "name": "github_pull_request_stats_developer_id_uk",
+          "columns": [
+            {
+              "expression": "developerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_pull_request_stats_cohort_snapshot_idx": {
+          "name": "github_pull_request_stats_cohort_snapshot_idx",
+          "columns": [
+            {
+              "expression": "cohortSnapshotSourceId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "github_pull_request_stats_developerId_developper_id_fk": {
+          "name": "github_pull_request_stats_developerId_developper_id_fk",
+          "tableFrom": "github_pull_request_stats",
+          "tableTo": "developper",
+          "columnsFrom": [
+            "developerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "github_pull_request_stats_cohortSnapshotSourceId_cohorts_snapshots_id_fk": {
+          "name": "github_pull_request_stats_cohortSnapshotSourceId_cohorts_snapshots_id_fk",
+          "tableFrom": "github_pull_request_stats",
+          "tableTo": "cohorts_snapshots",
+          "columnsFrom": [
+            "cohortSnapshotSourceId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.cohorts_snapshot_names": {
       "name": "cohorts_snapshot_names",
       "schema": "",
@@ -14,8 +226,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "snapshot_id": {
-          "name": "snapshot_id",
+        "snapshotId": {
+          "name": "snapshotId",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -26,26 +238,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "deleted_at": {
-          "name": "deleted_at",
+        "deletedAt": {
+          "name": "deletedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -56,7 +262,7 @@
           "name": "cohorts_snapshot_names_snapshot_idx",
           "columns": [
             {
-              "expression": "snapshot_id",
+              "expression": "snapshotId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -66,36 +272,15 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "cohorts_snapshot_names_snapshot_position_uk": {
-          "name": "cohorts_snapshot_names_snapshot_position_uk",
-          "columns": [
-            {
-              "expression": "snapshot_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "position",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
-        "cohorts_snapshot_names_snapshot_id_cohorts_snapshots_id_fk": {
-          "name": "cohorts_snapshot_names_snapshot_id_cohorts_snapshots_id_fk",
+        "cohorts_snapshot_names_snapshotId_cohorts_snapshots_id_fk": {
+          "name": "cohorts_snapshot_names_snapshotId_cohorts_snapshots_id_fk",
           "tableFrom": "cohorts_snapshot_names",
           "tableTo": "cohorts_snapshots",
           "columnsFrom": [
-            "snapshot_id"
+            "snapshotId"
           ],
           "columnsTo": [
             "id"
@@ -105,7 +290,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "cohorts_snapshot_names_name_unique": {
+          "name": "cohorts_snapshot_names_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -126,20 +319,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "deleted_at": {
-          "name": "deleted_at",
+        "deletedAt": {
+          "name": "deletedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false

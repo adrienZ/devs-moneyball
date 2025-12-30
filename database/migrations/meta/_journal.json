@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1759434756224,
-      "tag": "0000_sleepy_sandman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1759440340023,
-      "tag": "0001_abnormal_living_mummy",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1760111406748,
-      "tag": "0002_persistent_pull_request_stats",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1760775914319,
-      "tag": "0003_add_cohort_snapshot_source_to_pr_stats",
+      "when": 1767114385724,
+      "tag": "0000_slim_molten_man",
       "breakpoints": true
     }
   ]

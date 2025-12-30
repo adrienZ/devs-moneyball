@@ -38,15 +38,11 @@ export const snapshotNames = pgTable(
     snapshotId: uuid()
       .notNull()
       .references(() => snapshots.id, { onDelete: "cascade" }),
-    name: text().notNull(),
-    position: integer().notNull(), // 0-based index on the page
+    name: text().unique().notNull(),
     ...defaultDateColumns,
   },
   t => ({
     bySnapshotIdx: index("cohorts_snapshot_names_snapshot_idx").on(t.snapshotId),
-    uniquePerSnapshotPosition: uniqueIndex(
-      "cohorts_snapshot_names_snapshot_position_uk",
-    ).on(t.snapshotId, t.position),
   }),
 );
 
