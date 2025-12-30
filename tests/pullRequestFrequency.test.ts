@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ratePullRequestFrequency } from "../server/core/ratings/pullRequestFrequency";
+import { ratePullRequestFrequency } from "../server/core/ratings/pullRequestFrequency/score";
 
 describe("ratePullRequestFrequency", () => {
   it("returns 0 when there is no cohort data", () => {
