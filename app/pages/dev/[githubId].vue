@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useAsyncData, useLazyAsyncData } from "nuxt/app";
-import { useRoute } from "vue-router";
 import { computed, shallowRef } from "vue";
-import { UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
+import { useRoute } from "vue-router";
+import { ClientOnly, UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
+import CohortPullRequestsChart from "~/components/CohortPullRequestsChart.vue";
 import type { TabsItem, TableColumn } from "@nuxt/ui";
 
 interface PullRequestItem {
@@ -48,6 +49,12 @@ interface RatingsResponse {
   };
 }
 
+interface CohortPullRequestPoint {
+  login: string;
+  mergedPullRequestsTotalCount: number;
+  openPullRequestsTotalCount: number;
+}
+
 const route = useRoute();
 const githubId = (route.params as { githubId: string }).githubId;
 
@@ -81,6 +88,14 @@ const { data: ratings } = useAsyncData<RatingsResponse | null>(
   () => $fetch<RatingsResponse>(`/api/github/users/ratings/${githubId}`),
   {
     default: () => null,
+  },
+);
+
+const { data: cohortPullRequests } = useAsyncData<CohortPullRequestPoint[]>(
+  "cohort-pull-requests",
+  () => $fetch<CohortPullRequestPoint[]>("/api/github/users/cohort/pull-request-cohort-points"),
+  {
+    default: () => [],
   },
 );
 
@@ -264,6 +279,26 @@ const tabsItems = shallowRef<TabsItem[]>([
                   </tr>
                 </tbody>
               </table>
+            </UCard>
+
+            <UCard>
+              <template #header>
+                <h3 class="text-lg font-bold">
+                  Cohort PRs: Merged vs Open
+                </h3>
+              </template>
+              <ClientOnly>
+                <CohortPullRequestsChart
+                  :cohort="cohortPullRequests"
+                  :current="pullRequestsStats"
+                  :githubId="githubId"
+                />
+                <template #fallback>
+                  <p class="text-sm text-muted">
+                    Loading chart...
+                  </p>
+                </template>
+              </ClientOnly>
             </UCard>
 
             <!-- Overall rating -->

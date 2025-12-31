@@ -48,12 +48,12 @@ describe("SnapshotRepository", () => {
     const secondNames = await repository.listNamesBySnapshotId(secondId);
 
     expect(firstNames.sort()).toEqual(["alpha", "beta"]);
-    expect(secondNames.sort()).toEqual(["gamma", "delta"]);
+    expect(secondNames.sort()).toEqual(["delta", "gamma"]);
     expect([...firstNames, ...secondNames].sort()).toEqual([
       "alpha",
       "beta",
-      "gamma",
       "delta",
+      "gamma",
     ]);
   });
 

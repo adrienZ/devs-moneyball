@@ -1,10 +1,15 @@
 import { eq } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
-import { githubPullRequestStats } from "~~/database/schema";
+import { developper, githubPullRequestStats } from "~~/database/schema";
 
 type DrizzleClient = ReturnType<typeof useDrizzle>;
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
+type CohortPullRequestPoint = {
+  login: string;
+  mergedPullRequestsTotalCount: number;
+  openPullRequestsTotalCount: number;
+};
 
 export class PullRequestStatsRepository {
   private static instance: PullRequestStatsRepository | null = null;
@@ -67,5 +72,17 @@ export class PullRequestStatsRepository {
       .from(githubPullRequestStats)
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId))
       .then(rows => rows.map(row => row.total));
+  }
+
+  async listCohortPullRequestPoints(snapshotId: string): Promise<CohortPullRequestPoint[]> {
+    return this.db
+      .select({
+        login: developper.username,
+        mergedPullRequestsTotalCount: githubPullRequestStats.mergedPullRequestsTotalCount,
+        openPullRequestsTotalCount: githubPullRequestStats.openPullRequestsTotalCount,
+      })
+      .from(githubPullRequestStats)
+      .innerJoin(developper, eq(githubPullRequestStats.developerId, developper.id))
+      .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId));
   }
 }

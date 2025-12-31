@@ -6,9 +6,10 @@ With vue.js use composition api and script setup.
 
 ---
 
-Auto imports is disabled, you can get components by doing
+Auto imports is disabled, you can get global components by doing
 ```ts
 import { Component } from "#components"
+regular import otherwise
 ```
 
 And typescript modules using
