@@ -8,15 +8,13 @@ import { consola } from "consola";
 export default defineNitroPlugin(async () => {
   const db = useDrizzle();
 
-  if (!process.env.DATABASE_URL?.includes("supabase")) {
-    await migrate(db, {
-      migrationsFolder: resolve(
-        fileURLToPath(import.meta.url),
-        "../../../", // don't forget .nuxt folder is ancestor
-        "./database/migrations",
-      ),
-    });
-  }
+  await migrate(db, {
+    migrationsFolder: resolve(
+      fileURLToPath(import.meta.url),
+      "../../../", // don't forget .nuxt folder is ancestor
+      "./database/migrations",
+    ),
+  });
 
   const oneYearMs = 1000 * 60 * 60 * 24 * 365;
   const result = await runTask("db:cohort", {
