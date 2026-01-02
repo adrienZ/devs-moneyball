@@ -1,23 +1,22 @@
-This project is a Nuxt 4 project using nitro as backend.
+This project is a Nuxt 4 project using nitro as backend. Vue.js use composition api, script setup, scoped style (if needed).
+
+find more info on the [wiki](./wiki/) folder.
 
 ---
 
-With vue.js use composition api and script setup.
+Auto imports is disabled.
 
----
-
-Auto imports is disabled, you can get global components by doing
+You can get global components by doing
 ```ts
 import { Component } from "#components"
-regular import otherwise
 ```
+regular import otherwise.
 
 And typescript modules using
 ```ts
 import { myFunction } from "#imports"
 ```
-If you can use explicit dependecies (for example vue > #imports)
-
+If you can, use explicit dependecies (for example vue > #imports)
 ---
 
 Always try to reduce diffs unless absolutely needed.
@@ -38,7 +37,7 @@ Repository access is via singleton classes, so use `Repository.getInstance()` in
 
 ---
 
-If you edit graphql query, DO NOT EDIT FILES IN THE CODEGEN FOLDER,  please use `pnpm codegen` instead.
+DO NOT EDIT FILES IN THE CODEGEN FOLDER,  please use `pnpm codegen` instead.
 
 ---
 

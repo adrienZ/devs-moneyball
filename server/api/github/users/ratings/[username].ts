@@ -23,7 +23,8 @@ type CohortSummary = {
 };
 
 function percentileToTwentyScale(percentile: number): number {
-  return Math.floor(((percentile / 100) * 20) * 10) / 10;
+  const scaled = Math.floor(((percentile / 100) * 20) * 10) / 10;
+  return Math.max(1, scaled);
 }
 
 function summarizeCohortCounts(counts: number[]): CohortSummary {

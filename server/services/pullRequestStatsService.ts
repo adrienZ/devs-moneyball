@@ -1,5 +1,6 @@
 import type { developper, githubPullRequestStats } from "~~/database/schema";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
+import { ratingsConfig } from "~~/server/core/ratings/rating.config";
 import {
   GithubApiService,
   type PullRequestsUser,
@@ -17,7 +18,7 @@ export type PullRequestStatsResponse = {
     totalPullRequestContributions: number;
     totalPullRequestReviewContributions: number;
   };
-  pullRequests: { totalCount: number };
+  pullRequests: { totalCount: number; weeklyCount: number };
   mergedPullRequests: { totalCount: number };
   closedPullRequests: { totalCount: number };
   openPullRequests: { totalCount: number };
@@ -30,6 +31,8 @@ type PullRequestContributions = {
 
 type PullRequestCounts = {
   pullRequestsTotalCount: number;
+  pullRequestsWeeklyCount: number;
+  pullRequestsWeeklyCap: number;
   mergedPullRequestsTotalCount: number;
   closedPullRequestsTotalCount: number;
   openPullRequestsTotalCount: number;
@@ -48,9 +51,17 @@ function buildContributionsFromUser(user: PullRequestsUser): PullRequestContribu
   };
 }
 
-function buildCountsFromUser(user: PullRequestsUser, mergedPullRequestsTotalCount: number): PullRequestCounts {
+function buildCountsFromUser(
+  user: PullRequestsUser,
+  mergedPullRequestsTotalCount: number,
+  weeklyCap: number,
+): PullRequestCounts {
+  const pullRequestsTotalCount = user.pullRequests.totalCount;
+  const pullRequestsWeeklyCount = Math.min(pullRequestsTotalCount, weeklyCap);
   return {
-    pullRequestsTotalCount: user.pullRequests.totalCount,
+    pullRequestsTotalCount,
+    pullRequestsWeeklyCount,
+    pullRequestsWeeklyCap: weeklyCap,
     mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
     openPullRequestsTotalCount: user.openPullRequests.totalCount,
@@ -68,7 +79,10 @@ function mapRecordToResponse(
       totalPullRequestContributions: record.totalPullRequestContributions,
       totalPullRequestReviewContributions: record.totalPullRequestReviewContributions,
     },
-    pullRequests: { totalCount: record.pullRequestsTotalCount },
+    pullRequests: {
+      totalCount: record.pullRequestsTotalCount,
+      weeklyCount: record.pullRequestsWeeklyCount,
+    },
     mergedPullRequests: { totalCount: record.mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: record.closedPullRequestsTotalCount },
     openPullRequests: { totalCount: record.openPullRequestsTotalCount },
@@ -79,15 +93,18 @@ function mapApiUserToDb(
   user: PullRequestsUser,
   developerId: string,
   mergedPullRequestsTotalCount: number,
+  weeklyCap: number,
 ): PullRequestStatsInsert {
   const nowIso = new Date().toISOString();
   const contributions = buildContributionsFromUser(user);
-  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount);
+  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount, weeklyCap);
   return {
     developerId,
     totalPullRequestContributions: contributions.totalPullRequestContributions,
     totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
     pullRequestsTotalCount: counts.pullRequestsTotalCount,
+    pullRequestsWeeklyCount: counts.pullRequestsWeeklyCount,
+    pullRequestsWeeklyCap: counts.pullRequestsWeeklyCap,
     mergedPullRequestsTotalCount: counts.mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: counts.closedPullRequestsTotalCount,
     openPullRequestsTotalCount: counts.openPullRequestsTotalCount,
@@ -99,9 +116,10 @@ function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
   mergedPullRequestsTotalCount: number,
+  weeklyCap: number,
 ): PullRequestStatsResponse {
   const contributions = buildContributionsFromUser(user);
-  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount);
+  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount, weeklyCap);
   return {
     login,
     name: user.name ?? null,
@@ -109,7 +127,10 @@ function mapApiUserToResponse(
       totalPullRequestContributions: contributions.totalPullRequestContributions,
       totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
     },
-    pullRequests: { totalCount: counts.pullRequestsTotalCount },
+    pullRequests: {
+      totalCount: counts.pullRequestsTotalCount,
+      weeklyCount: counts.pullRequestsWeeklyCount,
+    },
     mergedPullRequests: { totalCount: counts.mergedPullRequestsTotalCount },
     closedPullRequests: { totalCount: counts.closedPullRequestsTotalCount },
     openPullRequests: { totalCount: counts.openPullRequestsTotalCount },
@@ -132,12 +153,7 @@ async function resolveCachedStatsResponse(
     options.cohortSnapshotSourceId
     && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
   ) {
-    const updatedRecord = await repository.updateCohortSnapshotSource(
-      developer.id,
-      options.cohortSnapshotSourceId,
-    );
-
-    if (updatedRecord) return mapRecordToResponse(updatedRecord, developer);
+    return null;
   }
 
   return mapRecordToResponse(cachedRecord, developer);
@@ -149,24 +165,17 @@ export async function ensurePullRequestStats(
 ): Promise<PullRequestStatsResponse | null> {
   const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
   const githubApiService = GithubApiService.getInstance();
-  // 1) Prefer cached stats, update cohort snapshot when requested.
-  const cachedResponse = await resolveCachedStatsResponse(
-    pullRequestStatsRepository,
-    developer,
-    options,
-  );
-  if (cachedResponse) return cachedResponse;
-
-  // 2) Fetch current totals from GitHub when cache is missing.
+  // 1) Fetch current totals from GitHub.
   const user = await githubApiService.fetchPullRequestsUser(developer.username);
   if (!user) {
     return null;
   }
 
-  // 3) Persist totals, return saved record when possible.
+  // 2) Persist totals, return saved record when possible.
+  const weeklyCap = ratingsConfig.pullRequestFrequency.capPerWeek;
   const mergedPullRequestsTotalCount = await githubApiService.fetchMergedPullRequestsCount(user.login);
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount),
+    ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount, weeklyCap),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const savedRecord = await pullRequestStatsRepository.upsert(values);
@@ -175,6 +184,6 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount);
+  return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount, weeklyCap);
 }
 // #endregion Service

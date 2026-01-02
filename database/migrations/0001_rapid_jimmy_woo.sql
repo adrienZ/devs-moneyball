@@ -1,0 +1,2 @@
+ALTER TABLE "github_pull_request_stats" ADD COLUMN "pullRequestsWeeklyCount" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "github_pull_request_stats" ADD COLUMN "pullRequestsWeeklyCap" integer NOT NULL;

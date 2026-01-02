@@ -80,6 +80,8 @@ export const githubPullRequestStats = pgTable(
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
     pullRequestsTotalCount: integer().notNull(),
+    pullRequestsWeeklyCount: integer().notNull(),
+    pullRequestsWeeklyCap: integer().notNull(),
     mergedPullRequestsTotalCount: integer().notNull(),
     closedPullRequestsTotalCount: integer().notNull(),
     openPullRequestsTotalCount: integer().notNull(),

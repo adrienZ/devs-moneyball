@@ -14,7 +14,7 @@ export function mapPullRequestFrequencyRawTotals(
   input: PullRequestFrequencyRawTotalsInput,
 ): PullRequestFrequencyRawTotals {
   return {
-    userPullRequestsTotal: input.userStats.pullRequests.totalCount,
+    userPullRequestsTotal: input.userStats.pullRequests.weeklyCount,
     cohortPullRequestsTotals: input.cohortCounts,
   };
 }

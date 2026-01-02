@@ -27,7 +27,7 @@ interface PullRequestsStats {
     totalPullRequestContributions: number;
     totalPullRequestReviewContributions: number;
   };
-  pullRequests: { totalCount: number };
+  pullRequests: { totalCount: number; weeklyCount: number };
   mergedPullRequests: { totalCount: number };
   closedPullRequests: { totalCount: number };
   openPullRequests: { totalCount: number };
@@ -51,8 +51,7 @@ interface RatingsResponse {
 
 interface CohortPullRequestPoint {
   login: string;
-  mergedPullRequestsTotalCount: number;
-  openPullRequestsTotalCount: number;
+  weeklyPullRequestsCount: number;
 }
 
 const route = useRoute();
@@ -147,7 +146,7 @@ const rows = computed(() => {
 const pullRequestsRows = computed(() => {
   if (!pullRequestsStats.value) return [] as Array<{ metric: string; value: number }>;
   return [
-    { metric: "Total PRs", value: pullRequestsStats.value.pullRequests.totalCount },
+    { metric: "Weekly PRs", value: pullRequestsStats.value.pullRequests.weeklyCount },
     { metric: "Merged PRs", value: pullRequestsStats.value.mergedPullRequests.totalCount },
     { metric: "Open PRs", value: pullRequestsStats.value.openPullRequests.totalCount },
     { metric: "Closed PRs", value: pullRequestsStats.value.closedPullRequests.totalCount },
@@ -284,7 +283,7 @@ const tabsItems = shallowRef<TabsItem[]>([
             <UCard>
               <template #header>
                 <h3 class="text-lg font-bold">
-                  Cohort PRs: Merged vs Open
+                  Cohort Weekly PRs
                 </h3>
               </template>
               <ClientOnly>

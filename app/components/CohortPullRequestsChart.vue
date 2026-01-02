@@ -1,28 +1,21 @@
 <script setup lang="ts">
-import { Chart, Legend, LinearScale, LogarithmicScale, PointElement, ScatterController, Tooltip } from "chart.js";
+import { Chart, Legend, LinearScale, PointElement, ScatterController, Tooltip } from "chart.js";
 import type { ChartDataset, ChartOptions, ScatterDataPoint, TooltipItem } from "chart.js";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 
 interface CohortPullRequestPoint {
   login: string;
-  mergedPullRequestsTotalCount: number;
-  openPullRequestsTotalCount: number;
+  weeklyPullRequestsCount: number;
 }
 
 interface PullRequestsStats {
   login: string;
-  mergedPullRequests: { totalCount: number };
-  openPullRequests: { totalCount: number };
+  pullRequests: { weeklyCount: number };
 }
 
 type CohortScatterPoint = ScatterDataPoint & {
   username: string;
   originalX: number;
-  originalY: number;
-  cappedX: boolean;
-  cappedY: boolean;
-  logAdjustedX: boolean;
-  logAdjustedY: boolean;
 };
 
 const props = defineProps<{
@@ -35,58 +28,21 @@ Chart.register(
   ScatterController,
   PointElement,
   LinearScale,
-  LogarithmicScale,
   Tooltip,
   Legend,
 );
 
-const percentile = (values: number[], percent: number): number => {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const rank = (percent / 100) * (sorted.length - 1);
-  const lower = Math.floor(rank);
-  const upper = Math.ceil(rank);
-  if (lower === upper) return sorted[lower] ?? 0;
-  const weight = rank - lower;
-  return (sorted[lower] ?? 0) * (1 - weight) + (sorted[upper] ?? 0) * weight;
-};
-
-const cohortCap = computed(() => {
-  const cohortMerged = props.cohort.map(point => point.mergedPullRequestsTotalCount);
-  const cohortOpen = props.cohort.map(point => point.openPullRequestsTotalCount);
-  const currentMerged = props.current?.mergedPullRequests.totalCount;
-  const currentOpen = props.current?.openPullRequests.totalCount;
-  if (typeof currentMerged === "number") cohortMerged.push(currentMerged);
-  if (typeof currentOpen === "number") cohortOpen.push(currentOpen);
-  return {
-    merged: percentile(cohortMerged, 95),
-    open: percentile(cohortOpen, 95),
-  };
-});
-
 const cohortPoints = computed<CohortScatterPoint[]>(() => {
   const currentLogin = (props.current?.login ?? props.githubId).toLowerCase();
-  const { merged, open } = cohortCap.value;
-  return props.cohort
+  return [...props.cohort]
     .filter(point => point.login.toLowerCase() !== currentLogin)
-    .map((point) => {
-      const originalX = point.mergedPullRequestsTotalCount;
-      const originalY = point.openPullRequestsTotalCount;
-      const cappedX = originalX > merged;
-      const cappedY = originalY > open;
-      const cappedValueX = cappedX ? merged : originalX;
-      const cappedValueY = cappedY ? open : originalY;
-      const logAdjustedX = cappedValueX < 1;
-      const logAdjustedY = cappedValueY < 1;
+    .sort((a, b) => a.weeklyPullRequestsCount - b.weeklyPullRequestsCount)
+    .map((point, index) => {
+      const originalX = point.weeklyPullRequestsCount;
       return {
-        x: logAdjustedX ? 1 : cappedValueX,
-        y: logAdjustedY ? 1 : cappedValueY,
+        x: originalX,
+        y: index + 1,
         originalX,
-        originalY,
-        cappedX,
-        cappedY,
-        logAdjustedX,
-        logAdjustedY,
         username: point.login,
       };
     });
@@ -94,24 +50,11 @@ const cohortPoints = computed<CohortScatterPoint[]>(() => {
 
 const currentPoint = computed<CohortScatterPoint | null>(() => {
   if (!props.current) return null;
-  const { merged, open } = cohortCap.value;
-  const originalX = props.current.mergedPullRequests.totalCount;
-  const originalY = props.current.openPullRequests.totalCount;
-  const cappedX = originalX > merged;
-  const cappedY = originalY > open;
-  const cappedValueX = cappedX ? merged : originalX;
-  const cappedValueY = cappedY ? open : originalY;
-  const logAdjustedX = cappedValueX < 1;
-  const logAdjustedY = cappedValueY < 1;
+  const originalX = props.current.pullRequests.weeklyCount;
   return {
-    x: logAdjustedX ? 1 : cappedValueX,
-    y: logAdjustedY ? 1 : cappedValueY,
+    x: originalX,
+    y: cohortPoints.value.length + 1,
     originalX,
-    originalY,
-    cappedX,
-    cappedY,
-    logAdjustedX,
-    logAdjustedY,
     username: props.current.login,
   };
 });
@@ -128,19 +71,8 @@ const tooltipLabel = (context: TooltipItem<"scatter">): string[] => {
   }
 
   const point = raw as CohortScatterPoint;
-  const displayX = point.x;
-  const displayY = point.y;
-  const mergedLabel = point.logAdjustedX
-    ? `Merged PRs: ${point.originalX} (displayed as 1 for log scale)`
-    : point.cappedX
-      ? `Merged PRs: ${point.originalX} (capped at ${displayX})`
-      : `Merged PRs: ${displayX}`;
-  const openLabel = point.logAdjustedY
-    ? `Open PRs: ${point.originalY} (displayed as 1 for log scale)`
-    : point.cappedY
-      ? `Open PRs: ${point.originalY} (capped at ${displayY})`
-      : `Open PRs: ${displayY}`;
-  return [point.username, mergedLabel, openLabel];
+  const weeklyLabel = `Weekly PRs: ${point.originalX}`;
+  return [point.username, weeklyLabel, `Rank: ${point.y}`];
 };
 
 const chartOptions: ChartOptions<"scatter"> = {
@@ -148,22 +80,20 @@ const chartOptions: ChartOptions<"scatter"> = {
   maintainAspectRatio: false,
   scales: {
     x: {
-      type: "logarithmic",
-      min: 1,
-      suggestedMax: Math.max(1, cohortCap.value.merged),
+      type: "linear",
+      min: 0,
       grid: {
         color: "rgba(148, 163, 184, 0.35)",
       },
-      title: { display: true, text: "Merged PRs" },
+      title: { display: true, text: "Weekly PRs" },
     },
     y: {
-      type: "logarithmic",
-      min: 1,
-      suggestedMax: Math.max(1, cohortCap.value.open),
+      type: "linear",
+      min: 0,
       grid: {
         color: "rgba(148, 163, 184, 0.35)",
       },
-      title: { display: true, text: "Open PRs" },
+      title: { display: true, text: "Developers (ranked)" },
     },
   },
   plugins: {
@@ -252,7 +182,7 @@ onBeforeUnmount(() => {
       v-if="hasCohortPoints"
       class="text-xs text-muted mt-2"
     >
-      Hover a dot to see the username and PR counts. The current developer is highlighted.
+      Hover a dot to see the username and weekly PRs. The current developer is highlighted.
     </p>
   </div>
 </template>

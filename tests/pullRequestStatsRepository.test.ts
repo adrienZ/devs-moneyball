@@ -40,6 +40,8 @@ describe("PullRequestStatsRepository", () => {
       totalPullRequestContributions: 3,
       totalPullRequestReviewContributions: 2,
       pullRequestsTotalCount: 5,
+      pullRequestsWeeklyCount: 5,
+      pullRequestsWeeklyCap: 30,
       mergedPullRequestsTotalCount: 1,
       closedPullRequestsTotalCount: 1,
       openPullRequestsTotalCount: 3,

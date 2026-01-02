@@ -7,8 +7,7 @@ type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
 type CohortPullRequestPoint = {
   login: string;
-  mergedPullRequestsTotalCount: number;
-  openPullRequestsTotalCount: number;
+  weeklyPullRequestsCount: number;
 };
 
 export class PullRequestStatsRepository {
@@ -68,7 +67,7 @@ export class PullRequestStatsRepository {
 
   async listCohortPullRequestCounts(snapshotId: string): Promise<number[]> {
     return this.db
-      .select({ total: githubPullRequestStats.pullRequestsTotalCount })
+      .select({ total: githubPullRequestStats.pullRequestsWeeklyCount })
       .from(githubPullRequestStats)
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId))
       .then(rows => rows.map(row => row.total));
@@ -78,8 +77,7 @@ export class PullRequestStatsRepository {
     return this.db
       .select({
         login: developper.username,
-        mergedPullRequestsTotalCount: githubPullRequestStats.mergedPullRequestsTotalCount,
-        openPullRequestsTotalCount: githubPullRequestStats.openPullRequestsTotalCount,
+        weeklyPullRequestsCount: githubPullRequestStats.pullRequestsWeeklyCount,
       })
       .from(githubPullRequestStats)
       .innerJoin(developper, eq(githubPullRequestStats.developerId, developper.id))

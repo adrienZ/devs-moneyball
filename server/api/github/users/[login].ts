@@ -72,17 +72,13 @@ export default defineEventHandler(async (event) => {
   // Criteria calculations (simple heuristics)
   const impactScore = Math.min(100, (totalStars + totalForks) / 100); // scale
   const activityScore = Math.min(100, data.public_repos * 5);
-  const collaborationScore = Math.floor(Math.random() * 40) + 60; // placeholder until PR data integrated
   const breadthScore = Math.min(100, topLanguages.length * 20);
-  const qualityScore = Math.floor(Math.random() * 30) + 50; // placeholder
 
   // Dev score = weighted
   const devScore = Math.round(
-    impactScore * 0.4
-    + activityScore * 0.2
-    + collaborationScore * 0.15
-    + breadthScore * 0.15
-    + qualityScore * 0.1,
+    impactScore * 0.5
+    + activityScore * 0.25
+    + breadthScore * 0.25,
   );
 
   function calculateLetter(score: number) {

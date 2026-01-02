@@ -9,7 +9,7 @@ type RatingsConfig = {
 
 export const ratingsConfig: RatingsConfig = {
   pullRequestFrequency: {
-    capPerWeek: 30,
+    capPerWeek: 90,
   },
   githubApi: {
     mergedPullRequestsLookbackYears: 5,
