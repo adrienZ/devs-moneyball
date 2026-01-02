@@ -7,11 +7,14 @@ type RatingsConfig = {
   };
 };
 
+const mergedPullRequestsLookbackMs = 365 * 24 * 60 * 60 * 1000;
+
 export const ratingsConfig: RatingsConfig = {
   pullRequestFrequency: {
     capPerWeek: 90,
+    lookbackMs: mergedPullRequestsLookbackMs,
   },
   githubApi: {
-    mergedPullRequestsLookbackMs: 7 * 24 * 60 * 60 * 1000,
+    mergedPullRequestsLookbackMs,
   },
 };

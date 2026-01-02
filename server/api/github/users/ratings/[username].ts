@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { ratingsConfig } from "~~/server/core/ratings/rating.config";
+import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 import { ratePullRequestFrequencyFromTotals } from "~~/server/core/ratings/pullRequestFrequency/pipeline";
 import { mapPullRequestFrequencyRawTotals } from "~~/server/core/ratings/pullRequestFrequency/mappings";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
@@ -16,7 +16,8 @@ type RatingCriterion = {
 
 function percentileToTwentyScale(percentile: number): number {
   const scaled = Math.floor(((percentile / 100) * 20) * 10) / 10;
-  return Math.max(1, scaled);
+  const notZero = Math.max(1, scaled);
+  return Math.floor(notZero);
 }
 
 export default defineEventHandler(async (event) => {

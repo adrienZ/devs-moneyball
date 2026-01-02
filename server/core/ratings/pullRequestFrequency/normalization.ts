@@ -1,9 +1,14 @@
+import { getLookbackWeeks } from "~~/server/utils/date-helper";
+
 type WeeklyCapConfig = {
   capPerWeek: number;
+  lookbackMs: number;
 };
 
 function applyWeeklyCapToTotal(totalCount: number, config: WeeklyCapConfig): number {
-  return Math.min(totalCount, config.capPerWeek);
+  const lookbackWeeks = getLookbackWeeks(config.lookbackMs);
+  const windowedCap = config.capPerWeek * lookbackWeeks;
+  return Math.min(totalCount, windowedCap);
 }
 
 export type PullRequestFrequencyTotalsInput = {

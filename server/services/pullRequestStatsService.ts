@@ -1,10 +1,12 @@
 import type { developper, githubPullRequestStats } from "~~/database/schema";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
-import { ratingsConfig } from "~~/server/core/ratings/rating.config";
+import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 import {
   GithubApiService,
+  type PullRequestCountsSince,
   type PullRequestsUser,
 } from "~~/server/services/githubApiService";
+import { getLookbackWeeks } from "~~/server/utils/date-helper";
 
 type PullRequestStatsRecord = typeof githubPullRequestStats.$inferSelect;
 type PullRequestStatsInsert = typeof githubPullRequestStats.$inferInsert;
@@ -51,20 +53,19 @@ function buildContributionsFromUser(user: PullRequestsUser): PullRequestContribu
   };
 }
 
-function buildCountsFromUser(
-  user: PullRequestsUser,
-  mergedPullRequestsTotalCount: number,
+function buildCountsFromTotals(
+  totals: PullRequestCountsSince,
   weeklyCap: number,
 ): PullRequestCounts {
-  const pullRequestsTotalCount = user.pullRequests.totalCount;
+  const pullRequestsTotalCount = totals.pullRequestsTotalCount;
   const pullRequestsWeeklyCount = Math.min(pullRequestsTotalCount, weeklyCap);
   return {
     pullRequestsTotalCount,
     pullRequestsWeeklyCount,
     pullRequestsWeeklyCap: weeklyCap,
-    mergedPullRequestsTotalCount,
-    closedPullRequestsTotalCount: user.closedPullRequests.totalCount,
-    openPullRequestsTotalCount: user.openPullRequests.totalCount,
+    mergedPullRequestsTotalCount: totals.mergedPullRequestsTotalCount,
+    closedPullRequestsTotalCount: totals.closedPullRequestsTotalCount,
+    openPullRequestsTotalCount: totals.openPullRequestsTotalCount,
   };
 }
 
@@ -92,12 +93,11 @@ function mapRecordToResponse(
 function mapApiUserToDb(
   user: PullRequestsUser,
   developerId: string,
-  mergedPullRequestsTotalCount: number,
+  totals: PullRequestCountsSince,
   weeklyCap: number,
 ): PullRequestStatsInsert {
-  const nowIso = new Date().toISOString();
   const contributions = buildContributionsFromUser(user);
-  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount, weeklyCap);
+  const counts = buildCountsFromTotals(totals, weeklyCap);
   return {
     developerId,
     totalPullRequestContributions: contributions.totalPullRequestContributions,
@@ -108,18 +108,17 @@ function mapApiUserToDb(
     mergedPullRequestsTotalCount: counts.mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: counts.closedPullRequestsTotalCount,
     openPullRequestsTotalCount: counts.openPullRequestsTotalCount,
-    updatedAt: nowIso,
   };
 }
 
 function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
-  mergedPullRequestsTotalCount: number,
+  totals: PullRequestCountsSince,
   weeklyCap: number,
 ): PullRequestStatsResponse {
   const contributions = buildContributionsFromUser(user);
-  const counts = buildCountsFromUser(user, mergedPullRequestsTotalCount, weeklyCap);
+  const counts = buildCountsFromTotals(totals, weeklyCap);
   return {
     login,
     name: user.name ?? null,
@@ -153,9 +152,11 @@ export async function ensurePullRequestStats(
 
   // 2) Persist totals, return saved record when possible.
   const weeklyCap = ratingsConfig.pullRequestFrequency.capPerWeek;
-  const mergedPullRequestsTotalCount = await githubApiService.fetchMergedPullRequestsCount(user.login);
+  const lookbackWeeks = getLookbackWeeks(ratingsConfig.pullRequestFrequency.lookbackMs);
+  const windowedCap = weeklyCap * lookbackWeeks;
+  const counts = await githubApiService.fetchPullRequestCountsSince(user.login);
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id, mergedPullRequestsTotalCount, weeklyCap),
+    ...mapApiUserToDb(user, developer.id, counts, windowedCap),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const savedRecord = await pullRequestStatsRepository.upsert(values);
@@ -164,6 +165,6 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username, mergedPullRequestsTotalCount, weeklyCap);
+  return mapApiUserToResponse(user, developer.username, counts, windowedCap);
 }
 // #endregion Service

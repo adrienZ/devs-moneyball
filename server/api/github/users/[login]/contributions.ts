@@ -1,7 +1,7 @@
 import type { H3Event } from "h3";
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { getGithubClient } from "~~/server/githubClient";
-import { searchMergedExternalPRsQuery } from "~~/server/graphql/searchMergedExternalPRs.gql";
+import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
 
 interface PullRequest {
   title: string;
@@ -29,8 +29,8 @@ export default defineEventHandler(async (event: H3Event) => {
   try {
     const query = `type:pr author:${login} is:merged is:public -user:${login} sort:updated-desc`;
     const resp = await getGithubClient().call(
-      searchMergedExternalPRsQuery,
-      { q: query },
+      searchMergedPullRequestsQuery,
+      { q: query, first: 50 },
     );
 
     const pullRequests = (resp.search.nodes ?? [])

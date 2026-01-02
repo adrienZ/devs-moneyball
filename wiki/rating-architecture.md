@@ -22,7 +22,7 @@ Stages
 4. API composition
    - API handlers compose the pipeline with configuration.
    - Raw totals are mapped for each rating in a dedicated mappings file.
-   - Rating settings live in `server/core/ratings/rating.config.ts`.
+   - Rating settings live in `server/core/ratings/ratings.config.ts`.
 
 Mermaid: data flow
 
