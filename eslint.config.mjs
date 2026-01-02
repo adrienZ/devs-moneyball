@@ -6,6 +6,7 @@ export default withNuxt([
     rules: {
       "vue/v-on-event-hyphenation": ["error", "never"],
       "vue/attribute-hyphenation": ["error", "never"],
+      "no-console": "error",
     },
   },
   {

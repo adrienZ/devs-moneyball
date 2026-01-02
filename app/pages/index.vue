@@ -52,6 +52,7 @@ function useLocationSearch() {
     await query.execute();
 
     if (query.error.value) {
+      // eslint-disable-next-line no-console
       console.error("Error fetching location suggestions:", query.error.value);
       locationOptions.value = [];
       return;

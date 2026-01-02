@@ -42,6 +42,7 @@ export async function getUserConfig(event: H3Event): Promise<IPInfo | undefined>
   }
 
   catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error fetching public config:", error);
     return undefined;
   }

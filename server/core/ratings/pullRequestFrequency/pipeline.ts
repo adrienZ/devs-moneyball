@@ -8,6 +8,7 @@ export type PullRequestFrequencyPipelineInput = {
 
 export type PullRequestFrequencyPipelineConfig = {
   capPerWeek: number;
+  lookbackMs: number;
 };
 
 export function ratePullRequestFrequencyFromTotals(

@@ -3,15 +3,18 @@ import type { PullRequestFrequencyPipelineConfig } from "~~/server/core/ratings/
 type RatingsConfig = {
   pullRequestFrequency: PullRequestFrequencyPipelineConfig;
   githubApi: {
-    mergedPullRequestsLookbackYears: number;
+    mergedPullRequestsLookbackMs: number;
   };
 };
+
+const mergedPullRequestsLookbackMs = 365 * 24 * 60 * 60 * 1000;
 
 export const ratingsConfig: RatingsConfig = {
   pullRequestFrequency: {
     capPerWeek: 90,
+    lookbackMs: mergedPullRequestsLookbackMs,
   },
   githubApi: {
-    mergedPullRequestsLookbackYears: 5,
+    mergedPullRequestsLookbackMs,
   },
 };
