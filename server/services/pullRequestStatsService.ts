@@ -139,26 +139,6 @@ function mapApiUserToResponse(
 // #endregion Mappings
 
 // #region Service
-async function resolveCachedStatsResponse(
-  repository: PullRequestStatsRepository,
-  developer: DeveloperRecord,
-  options: PullRequestStatsOptions,
-): Promise<PullRequestStatsResponse | null> {
-  const cachedRecord = await repository.findByDeveloperId(developer.id);
-  if (!cachedRecord) {
-    return null;
-  }
-
-  if (
-    options.cohortSnapshotSourceId
-    && cachedRecord.cohortSnapshotSourceId !== options.cohortSnapshotSourceId
-  ) {
-    return null;
-  }
-
-  return mapRecordToResponse(cachedRecord, developer);
-}
-
 export async function ensurePullRequestStats(
   developer: DeveloperRecord,
   options: PullRequestStatsOptions = {},

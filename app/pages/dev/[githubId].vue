@@ -22,15 +22,7 @@ interface PullRequestItem {
 
 interface PullRequestsStats {
   login: string;
-  name?: string | null;
-  contributionsCollection: {
-    totalPullRequestContributions: number;
-    totalPullRequestReviewContributions: number;
-  };
-  pullRequests: { totalCount: number; weeklyCount: number };
-  mergedPullRequests: { totalCount: number };
-  closedPullRequests: { totalCount: number };
-  openPullRequests: { totalCount: number };
+  pullRequests: { weeklyCount: number };
 }
 
 interface RatingsResponse {
@@ -40,18 +32,23 @@ interface RatingsResponse {
     description: string;
     value: number | null;
   }>;
-  cohort: {
+}
+
+interface CohortPullRequestPoint {
+  login: string;
+  weeklyPullRequestsCount: number;
+}
+
+interface CohortPullRequestsResponse {
+  cohort: CohortPullRequestPoint[];
+  cohortKeyNumbers: {
     size: number;
     min: number | null;
     max: number | null;
     median: number | null;
     average: number | null;
   };
-}
-
-interface CohortPullRequestPoint {
-  login: string;
-  weeklyPullRequestsCount: number;
+  current: PullRequestsStats | null;
 }
 
 const route = useRoute();
@@ -72,16 +69,6 @@ const { data: contributions } = useLazyAsyncData(
   },
 );
 
-const { data: pullRequestsStats } = useAsyncData<PullRequestsStats | null>(
-  "user-pull-requests",
-  () => $fetch<PullRequestsStats>(
-    `/api/github/users/pull-requests/${githubId}`,
-  ),
-  {
-    default: () => null,
-  },
-);
-
 const { data: ratings } = useAsyncData<RatingsResponse | null>(
   "user-ratings",
   () => $fetch<RatingsResponse>(`/api/github/users/ratings/${githubId}`),
@@ -90,13 +77,32 @@ const { data: ratings } = useAsyncData<RatingsResponse | null>(
   },
 );
 
-const { data: cohortPullRequests } = useAsyncData<CohortPullRequestPoint[]>(
+const { data: cohortPullRequests } = useAsyncData<CohortPullRequestsResponse>(
   "cohort-pull-requests",
-  () => $fetch<CohortPullRequestPoint[]>("/api/github/users/cohort/pull-request-cohort-points"),
+  () => $fetch<CohortPullRequestsResponse>(
+    "/api/github/users/cohort/pull-request-cohort-points",
+    {
+      query: { username: githubId },
+    },
+  ),
   {
-    default: () => [],
+    default: () => ({
+      cohort: [],
+      cohortKeyNumbers: {
+        size: 0,
+        min: null,
+        max: null,
+        median: null,
+        average: null,
+      },
+      current: null,
+    }),
   },
 );
+
+const cohortPoints = computed(() => cohortPullRequests.value?.cohort ?? []);
+const currentPullRequests = computed(() => cohortPullRequests.value?.current ?? null);
+const cohortKeyNumbers = computed(() => cohortPullRequests.value?.cohortKeyNumbers ?? null);
 
 const tableColumns: TableColumn<PullRequestItem>[] = [
   { id: "mergedAt", header: "Merged at" },
@@ -104,56 +110,6 @@ const tableColumns: TableColumn<PullRequestItem>[] = [
   { id: "commit", header: "Commit" },
   { id: "stars", header: "Stars ⭐️" },
 ] as const;
-
-const followersPerRepo = computed(() => {
-  if (user.value && user.value.public_repos > 0) {
-    return (user.value.followers / user.value.public_repos).toFixed(2);
-  }
-  return null;
-});
-
-const accountAge = computed(() => {
-  if (user.value) {
-    const diff = Date.now() - new Date(user.value.created_at).getTime();
-    return (diff / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
-  }
-  return null;
-});
-
-const starsPerRepo = computed(() => {
-  if (user.value) {
-    return user.value.avgStarsPerRepo.toFixed(2);
-  }
-  return null;
-});
-
-const keyMetrics = computed(() => ({
-  "Total Stars": user.value?.totalStars,
-  "Total Forks": user.value?.totalForks,
-  "Average Stars per Repo": starsPerRepo.value,
-  "Followers per Repo": followersPerRepo.value,
-  "Account Age (years)": accountAge.value,
-  "Top Languages": user.value?.topLanguages.join(", "),
-}));
-
-const rows = computed(() => {
-  return Object.entries(keyMetrics.value).map(([key, value]) => ({
-    metric: key,
-    value,
-  }));
-});
-
-const pullRequestsRows = computed(() => {
-  if (!pullRequestsStats.value) return [] as Array<{ metric: string; value: number }>;
-  return [
-    { metric: "Weekly PRs", value: pullRequestsStats.value.pullRequests.weeklyCount },
-    { metric: "Merged PRs", value: pullRequestsStats.value.mergedPullRequests.totalCount },
-    { metric: "Open PRs", value: pullRequestsStats.value.openPullRequests.totalCount },
-    { metric: "Closed PRs", value: pullRequestsStats.value.closedPullRequests.totalCount },
-    { metric: "PR Contributions", value: pullRequestsStats.value.contributionsCollection.totalPullRequestContributions },
-    { metric: "PR Reviews", value: pullRequestsStats.value.contributionsCollection.totalPullRequestReviewContributions },
-  ];
-});
 
 const tabsItems = shallowRef<TabsItem[]>([
   {
@@ -288,8 +244,8 @@ const tabsItems = shallowRef<TabsItem[]>([
               </template>
               <ClientOnly>
                 <CohortPullRequestsChart
-                  :cohort="cohortPullRequests"
-                  :current="pullRequestsStats"
+                  :cohort="cohortPoints"
+                  :current="currentPullRequests"
                   :githubId="githubId"
                 />
                 <template #fallback>
@@ -298,6 +254,56 @@ const tabsItems = shallowRef<TabsItem[]>([
                   </p>
                 </template>
               </ClientOnly>
+              <template
+                v-if="cohortKeyNumbers"
+                #footer
+              >
+                <div class="text-sm font-bold mb-2">
+                  Cohort Summary (PRs)
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div class="text-muted">
+                      Size
+                    </div>
+                    <div class="font-semibold">
+                      {{ cohortKeyNumbers.size }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-muted">
+                      Min
+                    </div>
+                    <div class="font-semibold">
+                      {{ cohortKeyNumbers.min ?? "N/A" }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-muted">
+                      Median
+                    </div>
+                    <div class="font-semibold">
+                      {{ cohortKeyNumbers.median ?? "N/A" }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-muted">
+                      Max
+                    </div>
+                    <div class="font-semibold">
+                      {{ cohortKeyNumbers.max ?? "N/A" }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-muted">
+                      Average
+                    </div>
+                    <div class="font-semibold">
+                      {{ cohortKeyNumbers.average?.toFixed(1) ?? "N/A" }}
+                    </div>
+                  </div>
+                </div>
+              </template>
             </UCard>
 
             <!-- Overall rating -->
@@ -320,79 +326,6 @@ const tabsItems = shallowRef<TabsItem[]>([
                   </UBadge>
                 </UTooltip>
                 <span class="mt-2 text-yellow-400 font-medium">{{ user?.summary }}</span>
-              </div>
-            </UCard>
-
-            <!-- Key Metrics Table -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Key Metrics
-                </h3>
-              </template>
-              <UTable :data="rows" />
-            </UCard>
-          </div>
-
-          <!-- RIGHT PANEL -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Pull Requests Stats Table -->
-            <UCard v-if="pullRequestsStats">
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Pull Requests
-                </h3>
-              </template>
-              <UTable :data="pullRequestsRows" />
-            </UCard>
-
-            <UCard v-if="ratings?.cohort">
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Cohort Summary (PRs)
-                </h3>
-              </template>
-              <div class="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div class="text-muted">
-                    Size
-                  </div>
-                  <div class="font-semibold">
-                    {{ ratings.cohort.size }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-muted">
-                    Min
-                  </div>
-                  <div class="font-semibold">
-                    {{ ratings.cohort.min ?? "N/A" }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-muted">
-                    Median
-                  </div>
-                  <div class="font-semibold">
-                    {{ ratings.cohort.median ?? "N/A" }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-muted">
-                    Max
-                  </div>
-                  <div class="font-semibold">
-                    {{ ratings.cohort.max ?? "N/A" }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-muted">
-                    Average
-                  </div>
-                  <div class="font-semibold">
-                    {{ ratings.cohort.average?.toFixed(1) ?? "N/A" }}
-                  </div>
-                </div>
               </div>
             </UCard>
           </div>

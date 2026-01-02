@@ -3,6 +3,7 @@ import { ratingsConfig } from "~~/server/core/ratings/rating.config";
 import { getGithubClient } from "~~/server/githubClient";
 import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
 import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
+import { getMergedPullRequestsSinceDate } from "~~/server/utils/date-helper";
 
 type PullRequestsQueryResult = DocumentType<typeof getPullRequestsStatsQuery>;
 export type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
@@ -10,12 +11,6 @@ export type PullRequestsUser = NonNullable<PullRequestsQueryResult["user"]>;
 type MergedPullRequestsQueryResult = DocumentType<typeof searchMergedPullRequestsQuery>;
 type MergedPullRequestsSearch = MergedPullRequestsQueryResult["search"];
 type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["nodes"]>[number]>;
-
-function getMergedPullRequestsSinceDate(lookbackYears: number): string {
-  const now = new Date();
-  now.setFullYear(now.getFullYear() - lookbackYears);
-  return now.toISOString().split("T")[0] ?? now.toISOString();
-}
 
 function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode & { __typename: "PullRequest" } {
   return !!node && node.__typename === "PullRequest";
@@ -44,7 +39,7 @@ export class GithubApiService {
   async fetchMergedPullRequestsCount(login: string): Promise<number> {
     const githubClient = getGithubClient();
     const sinceDate = getMergedPullRequestsSinceDate(
-      ratingsConfig.githubApi.mergedPullRequestsLookbackYears,
+      ratingsConfig.githubApi.mergedPullRequestsLookbackMs,
     );
     const query = `is:pr author:${login} merged:>=${sinceDate}`;
     let after: string | null = null;

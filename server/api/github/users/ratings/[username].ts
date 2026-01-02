@@ -14,47 +14,9 @@ type RatingCriterion = {
   value: number | null;
 };
 
-type CohortSummary = {
-  size: number;
-  min: number | null;
-  max: number | null;
-  median: number | null;
-  average: number | null;
-};
-
 function percentileToTwentyScale(percentile: number): number {
   const scaled = Math.floor(((percentile / 100) * 20) * 10) / 10;
   return Math.max(1, scaled);
-}
-
-function summarizeCohortCounts(counts: number[]): CohortSummary {
-  if (counts.length === 0) {
-    return {
-      size: 0,
-      min: null,
-      max: null,
-      median: null,
-      average: null,
-    };
-  }
-
-  const sorted = [...counts].sort((a, b) => a - b);
-  const size = sorted.length;
-  const min = sorted[0] ?? null;
-  const max = sorted[sorted.length - 1] ?? null;
-  const mid = Math.floor(size / 2);
-  const median = size % 2 === 0
-    ? (sorted[mid - 1]! + sorted[mid]!) / 2
-    : sorted[mid]!;
-  const average = sorted.reduce((sum, value) => sum + value, 0) / size;
-
-  return {
-    size,
-    min,
-    max,
-    median,
-    average,
-  };
 }
 
 export default defineEventHandler(async (event) => {
@@ -78,6 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const stats = await ensurePullRequestStats(developerRow);
+
   if (!stats) {
     throw createError({ statusCode: 404, message: "User not found" });
   }
@@ -90,7 +53,6 @@ export default defineEventHandler(async (event) => {
       .listCohortPullRequestCounts(latestSnapshot.id);
   }
 
-  const cohortSummary = summarizeCohortCounts(cohortCounts);
   const pullRequestFrequency = cohortCounts.length > 0
     ? percentileToTwentyScale(ratePullRequestFrequencyFromTotals(
         mapPullRequestFrequencyRawTotals({
@@ -112,6 +74,5 @@ export default defineEventHandler(async (event) => {
 
   return {
     criteria,
-    cohort: cohortSummary,
   };
 });
