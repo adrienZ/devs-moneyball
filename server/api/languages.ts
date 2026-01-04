@@ -29,10 +29,16 @@ export default defineCachedEventHandler(async (_event) => {
   const file = await useStorage<string>("assets:server").getItem("languages.yml");
   const languages = parse(file!) as LanguagesYml;
   // Flatten the record into a list
-  const languageList: LanguageListEntry[] = Object.entries(languages).map(([label, entry]) => ({
-    label,
-    ...entry,
-  }));
+  const languageList: LanguageListEntry[] = Object.entries(languages)
+    .reduce<LanguageListEntry[]>((list, [label, entry]) => {
+      if (entry.type === "programming") {
+        list.push({
+          label,
+          ...entry,
+        });
+      }
+      return list;
+    }, []);
   return languageList;
 }, {
   maxAge: 60 * 60 * 24 * 3, // Cache for 3 days

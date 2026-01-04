@@ -30,11 +30,11 @@ export default defineNuxtConfig({
     experimental: {
       tasks: true,
     },
-    devStorage: {
-      cache: {
-        driver: "null", // no-cache
-      },
-    },
+    // devStorage: {
+    //   cache: {
+    //     driver: "null", // no-cache
+    //   },
+    // },
     scheduledTasks: {
       // every year on Dec 31st at midnight
       "0 0 31 12 *": ["db:cohort"],

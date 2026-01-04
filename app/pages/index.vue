@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
 import { getUserConfig } from "~~/server/utils/user-location";
 import { useAsyncData, useRequestEvent } from "nuxt/app";
-import { ref, computed, h, resolveComponent, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useDebounceFn, useUrlSearchParams } from "@vueuse/core";
 import { UFormField, UInputNumber, USlider, USelect, UProgress, UAlert, UInputMenu } from "#components";
+import UsersTable from "~/components/UsersTable.vue";
 import type { LocationSuggestion } from "~~/server/services/locationService";
 import { useRoute } from "vue-router";
 import type { LanguageListEntry } from "~~/server/api/languages";
@@ -142,9 +142,6 @@ interface User {
   location?: string | null;
 }
 
-const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
-const getAge = (createdAt: string) => (Date.now() - new Date(createdAt).getTime()) / MS_IN_YEAR;
-
 const minFollowers = ref<number | undefined>();
 const maxFollowers = ref<number | undefined>();
 
@@ -264,66 +261,6 @@ watch(userConfig, (newConfig) => {
     locationOptions.value = [location];
   }
 }, { immediate: true, deep: true });
-
-const UButton = resolveComponent("UButton");
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
-function getHeader(column: Parameters<TableColumn<User>["header"]>["0"]["column"], label: string) {
-  const isSorted = column.getIsSorted();
-  return h(UButton, {
-    "color": "neutral",
-    "variant": "ghost",
-    label,
-    "icon": isSorted
-      ? isSorted === "asc"
-        ? "i-lucide-arrow-up-narrow-wide"
-        : "i-lucide-arrow-down-wide-narrow"
-      : "i-lucide-arrow-up-down",
-    "class": "-mx-2.5",
-    "aria-label": `Sort by ${label}`,
-    "onClick": () => column.toggleSorting(isSorted === "asc"),
-  });
-}
-
-const columns = [
-  {
-    accessorKey: "login",
-    header: ({ column }) => getHeader(column, "User"),
-    cell: ({ row }) =>
-      h(
-        "a",
-        { href: `/dev/${row.original.login}`, class: "flex items-center gap-1 text-primary underline" },
-        [
-          h(resolveComponent("UAvatar"), {
-            src: `https://github.com/${row.original.login}.png`,
-            alt: row.original.login,
-            size: "sm",
-          }),
-          row.original.login,
-        ],
-      ),
-    enableSorting: true,
-  },
-  {
-    accessorKey: "followers.totalCount",
-    header: ({ column }) => getHeader(column, "Followers"),
-    cell: ({ row }) => row.original.followers.totalCount,
-    enableSorting: true,
-  },
-  {
-    accessorKey: "location",
-    header: ({ column }) => getHeader(column, "Location"),
-    cell: ({ row }) => row.original.location || "-",
-    enableSorting: false,
-  },
-  {
-    accessorKey: "createdAt",
-    header: ({ column }) => getHeader(column, "Account Age"),
-    cell: ({ row }) => `${Math.floor(getAge(row.original.createdAt))} years`,
-    enableSorting: true,
-  },
-] satisfies TableColumn<User>[];
 
 const sorting = ref([]);
 
@@ -452,30 +389,15 @@ function goPrev() {
         />
       </UFormField>
     </div>
-    <UTable
+    <UsersTable
       v-model:sorting="sorting"
-      :data="users"
-      :columns="columns"
-      class="mt-6"
+      :users="users"
+      :canPrev="canPrev"
+      :canNext="canNext"
+      :page="page"
+      :totalPages="totalPages"
+      @prev="goPrev"
+      @next="goNext"
     />
-    <div class="flex items-center justify-center gap-4 my-8">
-      <UButton
-        variant="soft"
-        :disabled="!canPrev"
-        @click="goPrev"
-      >
-        Previous
-      </UButton>
-      <span class="text-sm text-muted">
-        Page {{ page }} of {{ totalPages }}
-      </span>
-      <UButton
-        variant="soft"
-        :disabled="!canNext"
-        @click="goNext"
-      >
-        Next
-      </UButton>
-    </div>
   </div>
 </template>
