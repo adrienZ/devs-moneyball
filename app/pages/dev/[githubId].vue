@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useAsyncData, useLazyAsyncData } from "nuxt/app";
-import { computed, shallowRef } from "vue";
+import { shallowRef } from "vue";
 import { useRoute } from "vue-router";
-import { ClientOnly, UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
-import CohortPullRequestsChart from "~/components/CohortPullRequestsChart.vue";
+import { LazyClientOnly, UTable, UTooltip, UTabs, UAvatar, NuxtTime } from "#components";
+import UserCohortModalTrigger from "~/components/UserCohortModalTrigger.vue";
 import type { TabsItem, TableColumn } from "@nuxt/ui";
 
 interface PullRequestItem {
@@ -20,11 +20,6 @@ interface PullRequestItem {
   };
 }
 
-interface PullRequestsStats {
-  login: string;
-  pullRequests: { weeklyCount: number };
-}
-
 interface RatingsResponse {
   criteria: Array<{
     code: string;
@@ -32,23 +27,6 @@ interface RatingsResponse {
     description: string;
     value: number | null;
   }>;
-}
-
-interface CohortPullRequestPoint {
-  login: string;
-  weeklyPullRequestsCount: number;
-}
-
-interface CohortPullRequestsResponse {
-  cohort: CohortPullRequestPoint[];
-  cohortKeyNumbers: {
-    size: number;
-    min: number | null;
-    max: number | null;
-    median: number | null;
-    average: number | null;
-  };
-  current: PullRequestsStats | null;
 }
 
 const route = useRoute();
@@ -76,33 +54,6 @@ const { data: ratings } = useAsyncData<RatingsResponse | null>(
     default: () => null,
   },
 );
-
-const { data: cohortPullRequests } = useAsyncData<CohortPullRequestsResponse>(
-  "cohort-pull-requests",
-  () => $fetch<CohortPullRequestsResponse>(
-    "/api/github/users/cohort/pull-request-cohort-points",
-    {
-      query: { username: githubId },
-    },
-  ),
-  {
-    default: () => ({
-      cohort: [],
-      cohortKeyNumbers: {
-        size: 0,
-        min: null,
-        max: null,
-        median: null,
-        average: null,
-      },
-      current: null,
-    }),
-  },
-);
-
-const cohortPoints = computed(() => cohortPullRequests.value?.cohort ?? []);
-const currentPullRequests = computed(() => cohortPullRequests.value?.current ?? null);
-const cohortKeyNumbers = computed(() => cohortPullRequests.value?.cohortKeyNumbers ?? null);
 
 const tableColumns: TableColumn<PullRequestItem>[] = [
   { id: "mergedAt", header: "Merged at" },
@@ -209,8 +160,11 @@ const tabsItems = shallowRef<TabsItem[]>([
                     <th class="py-2 pr-4 font-semibold">
                       Metric
                     </th>
-                    <th class="py-2 font-semibold">
+                    <th class="py-2 pr-4 font-semibold">
                       Note / 20
+                    </th>
+                    <th class="py-2 font-semibold">
+                      Cohort
                     </th>
                   </tr>
                 </thead>
@@ -228,82 +182,17 @@ const tabsItems = shallowRef<TabsItem[]>([
                         <div> {{ criterion.label }}</div>
                       </UTooltip>
                     </td>
-                    <td class="py-2 font-semibold">
+                    <td class="py-2 pr-4 font-semibold">
                       {{ criterion.value ?? "N/A" }}
+                    </td>
+                    <td class="py-2">
+                      <LazyClientOnly>
+                        <UserCohortModalTrigger :githubId="githubId" />
+                      </LazyClientOnly>
                     </td>
                   </tr>
                 </tbody>
               </table>
-            </UCard>
-
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-bold">
-                  Cohort Weekly PRs
-                </h3>
-              </template>
-              <ClientOnly>
-                <CohortPullRequestsChart
-                  :cohort="cohortPoints"
-                  :current="currentPullRequests"
-                  :githubId="githubId"
-                />
-                <template #fallback>
-                  <p class="text-sm text-muted">
-                    Loading chart...
-                  </p>
-                </template>
-              </ClientOnly>
-              <template
-                v-if="cohortKeyNumbers"
-                #footer
-              >
-                <div class="text-sm font-bold mb-2">
-                  Cohort Summary (PRs)
-                </div>
-                <div class="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <div class="text-muted">
-                      Size
-                    </div>
-                    <div class="font-semibold">
-                      {{ cohortKeyNumbers.size }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-muted">
-                      Min
-                    </div>
-                    <div class="font-semibold">
-                      {{ cohortKeyNumbers.min ?? "N/A" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-muted">
-                      Median
-                    </div>
-                    <div class="font-semibold">
-                      {{ cohortKeyNumbers.median ?? "N/A" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-muted">
-                      Max
-                    </div>
-                    <div class="font-semibold">
-                      {{ cohortKeyNumbers.max ?? "N/A" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-muted">
-                      Average
-                    </div>
-                    <div class="font-semibold">
-                      {{ cohortKeyNumbers.average?.toFixed(1) ?? "N/A" }}
-                    </div>
-                  </div>
-                </div>
-              </template>
             </UCard>
 
             <!-- Overall rating -->
