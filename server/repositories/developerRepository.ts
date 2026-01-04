@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { ilike, inArray } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
 import { developper } from "~~/database/schema";
 
@@ -25,7 +25,8 @@ export class DeveloperRepository {
     const developerRecord = await this.db
       .select()
       .from(developper)
-      .where(eq(developper.username, username))
+      // GitHub usernames are case-insensitive; match regardless of URL casing.
+      .where(ilike(developper.username, username))
       .limit(1);
 
     return developerRecord.at(0) ?? null;

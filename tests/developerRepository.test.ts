@@ -40,4 +40,20 @@ describe("DeveloperRepository", () => {
     const fetchedUpdated = await repository.findByUsername("alice-updated");
     expect(fetchedUpdated?.avatarUrl).toBe("https://example.com/b.png");
   });
+
+  it("finds developers regardless of username casing", async () => {
+    const { DeveloperRepository } = await import("../server/repositories/developerRepository");
+    const repository = DeveloperRepository.getInstance();
+
+    await repository.upsertFromGithub({
+      id: "dev-2",
+      githubId: "gh-2",
+      username: "CMarzin",
+      avatarUrl: "https://example.com/c.png",
+      bio: null,
+    });
+
+    const fetched = await repository.findByUsername("cmarzin");
+    expect(fetched?.githubId).toBe("gh-2");
+  });
 });

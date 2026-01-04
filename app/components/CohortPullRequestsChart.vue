@@ -298,8 +298,8 @@ onBeforeUnmount(() => {
   <div>
     <div
       v-if="hasCohortPoints"
-      class="h-80 relative"
       ref="chartContainer"
+      class="h-80 relative"
     >
       <canvas
         ref="chartCanvas"
@@ -307,8 +307,8 @@ onBeforeUnmount(() => {
       />
       <div
         v-if="tooltipVisible && tooltipPoint"
-        class="absolute z-10 flex items-center gap-3 rounded-lg border bg-elevated px-3 py-2 text-xs text-muted shadow-lg"
         ref="tooltipEl"
+        class="absolute z-10 flex items-center gap-3 rounded-lg border bg-elevated px-3 py-2 text-xs text-muted shadow-lg"
         :style="{
           left: `${tooltipX}px`,
           top: `${tooltipY}px`,
