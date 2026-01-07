@@ -28,7 +28,7 @@ export const snapshots = pgTable(
       .$defaultFn(() => randomUUID())
       .primaryKey(),
     count: integer().notNull(),
-    pullRequestFrequencyLookbackWeeks: integer().notNull().default(legacyLookbackWeeksValue),
+    pullRequestFrequencyLookbackWeeks: integer().default(legacyLookbackWeeksValue).notNull(),
     ...defaultDateColumns,
   },
 );
