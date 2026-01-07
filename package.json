@@ -38,6 +38,7 @@
     "nanoid": "^5.1.6",
     "nuxt": "^4.2.2",
     "pg": "^8.11.3",
+    "pg-boss": "^12.5.4",
     "postgres": "^3.4.7",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

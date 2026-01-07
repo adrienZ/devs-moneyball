@@ -2,11 +2,10 @@ import { defineTask } from "nitropack/runtime";
 import { getGithubClient } from "~~/server/githubClient";
 import { parse } from "graphql";
 import { nanoid } from "nanoid";
-import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
-import type { PullRequestStatsResponse } from "~~/server/services/pullRequestStatsService";
 import { z } from "zod";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
+import { enqueuePullRequestStats } from "~~/server/services/queueService";
 
 interface CohortUser {
   id: string;
@@ -145,18 +144,17 @@ export default defineTask({
     });
     const developers = await developerRepository.listByUsernames(resolvedLogins);
 
-    const pullRequestStats = (
-      await Promise.all(
-        developers.map(developer => ensurePullRequestStats(developer, {
-          cohortSnapshotSourceId: snapshotId,
-        })),
-      )
-    ).filter((stats): stats is PullRequestStatsResponse => stats !== null);
+    // Enqueue pull request stats jobs for async processing via pg-boss
+    const jobs = developers.map(developer => ({
+      developerId: developer.id,
+      cohortSnapshotSourceId: snapshotId,
+    }));
+    await enqueuePullRequestStats(jobs);
 
     return {
       result: {
         skipped: false,
-        message: `Cohort snapshot created with ${insertedDevs.length} new developers. Fetched PR stats for ${pullRequestStats.length} developers.`,
+        message: `Cohort snapshot created with ${insertedDevs.length} new developers. Enqueued ${jobs.length} PR stats jobs.`,
       },
     };
   },

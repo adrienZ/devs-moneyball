@@ -1,4 +1,4 @@
-import { ilike, inArray } from "drizzle-orm";
+import { eq, ilike, inArray } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
 import { developper } from "~~/database/schema";
 
@@ -19,6 +19,16 @@ export class DeveloperRepository {
 
   private get db(): DrizzleClient {
     return useDrizzle();
+  }
+
+  async findById(id: string): Promise<DeveloperRecord | null> {
+    const developerRecord = await this.db
+      .select()
+      .from(developper)
+      .where(eq(developper.id, id))
+      .limit(1);
+
+    return developerRecord.at(0) ?? null;
   }
 
   async findByUsername(username: string): Promise<DeveloperRecord | null> {
