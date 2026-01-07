@@ -1,5 +1,4 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
-import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 import { ratePullRequestFrequencyFromTotals } from "~~/server/core/ratings/pullRequestFrequency/pipeline";
 import { mapPullRequestFrequencyRawTotals } from "~~/server/core/ratings/pullRequestFrequency/mappings";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
@@ -40,13 +39,12 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const latestSnapshot = await snapshotRepository.findLatest();
   const stats = await ensurePullRequestStats(developerRow);
 
   if (!stats) {
     throw createError({ statusCode: 404, message: "User not found" });
   }
-
-  const latestSnapshot = await snapshotRepository.findLatest();
 
   let cohortCounts: number[] = [];
   if (latestSnapshot) {
@@ -60,7 +58,6 @@ export default defineEventHandler(async (event) => {
           userStats: stats,
           cohortCounts,
         }),
-        ratingsConfig.pullRequestFrequency,
       ))
     : null;
 

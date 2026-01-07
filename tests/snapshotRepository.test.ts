@@ -20,6 +20,7 @@ describe("SnapshotRepository", () => {
       count: 2,
       names: ["alpha", "beta", "alpha"],
       timestamp,
+      pullRequestFrequencyLookbackWeeks: 4,
     });
 
     const latest = await repository.findLatest();
@@ -37,11 +38,13 @@ describe("SnapshotRepository", () => {
       count: 2,
       names: ["alpha", "beta"],
       timestamp: new Date().toISOString(),
+      pullRequestFrequencyLookbackWeeks: 4,
     });
     const secondId = await repository.createSnapshotWithNames({
       count: 2,
       names: ["gamma", "delta"],
       timestamp: new Date().toISOString(),
+      pullRequestFrequencyLookbackWeeks: 4,
     });
 
     const firstNames = await repository.listNamesBySnapshotId(firstId);
@@ -65,11 +68,13 @@ describe("SnapshotRepository", () => {
       count: 2,
       names: ["alpha", "beta"],
       timestamp: new Date().toISOString(),
+      pullRequestFrequencyLookbackWeeks: 4,
     });
     const secondId = await repository.createSnapshotWithNames({
       count: 2,
       names: ["alpha", "beta"],
       timestamp: new Date().toISOString(),
+      pullRequestFrequencyLookbackWeeks: 4,
     });
 
     const firstNames = await repository.listNamesBySnapshotId(firstId);

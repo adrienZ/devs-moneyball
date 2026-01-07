@@ -6,16 +6,10 @@ export type PullRequestFrequencyPipelineInput = {
   cohortPullRequestsTotals: number[];
 };
 
-export type PullRequestFrequencyPipelineConfig = {
-  capPerWeek: number;
-  lookbackMs: number;
-};
-
 export function ratePullRequestFrequencyFromTotals(
   input: PullRequestFrequencyPipelineInput,
-  config: PullRequestFrequencyPipelineConfig,
 ): number {
-  const normalized = normalizePullRequestFrequencyTotals(input, config);
+  const normalized = normalizePullRequestFrequencyTotals(input);
   return ratePullRequestFrequency({
     userPullRequests: normalized.userPullRequestsTotal,
     cohortCounts: normalized.cohortPullRequestsTotals,

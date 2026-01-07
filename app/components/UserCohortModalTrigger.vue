@@ -6,12 +6,12 @@ import CohortPullRequestsChart from "~/components/CohortPullRequestsChart.vue";
 
 interface CohortPullRequestPoint {
   login: string;
-  weeklyPullRequestsCount: number;
+  pullRequestsCount: number;
 }
 
 interface PullRequestsStats {
   login: string;
-  pullRequests: { weeklyCount: number };
+  pullRequests: { totalCount: number };
 }
 
 interface CohortPullRequestsResponse {
@@ -24,6 +24,7 @@ interface CohortPullRequestsResponse {
     average: number | null;
   };
   current: PullRequestsStats | null;
+  lookbackWeeks: number;
 }
 
 const props = defineProps<{
@@ -48,6 +49,7 @@ const { data, pending, error, execute, status } = useLazyFetch<CohortPullRequest
         average: null,
       },
       current: null,
+      lookbackWeeks: 0,
     }),
   },
 );
@@ -61,6 +63,7 @@ watch(open, (value) => {
 const cohortPoints = computed(() => data.value?.cohort ?? []);
 const currentPullRequests = computed(() => data.value?.current ?? null);
 const cohortKeyNumbers = computed(() => data.value?.cohortKeyNumbers ?? null);
+const lookbackWeeks = computed(() => data.value?.lookbackWeeks ?? 0);
 const hasData = computed(() => status.value === "success");
 </script>
 
@@ -68,7 +71,7 @@ const hasData = computed(() => status.value === "success");
   <UModal
     v-model:open="open"
     :title="`Cohort data for ${githubId}`"
-    description="Cohort weekly pull request chart and summary."
+    description="Cohort merged pull request chart and summary."
   >
     <UButton
       icon="i-lucide-chart-scatter"
@@ -101,6 +104,7 @@ const hasData = computed(() => status.value === "success");
               :cohort="cohortPoints"
               :current="currentPullRequests"
               :githubId="githubId"
+              :lookbackWeeks="lookbackWeeks"
             />
             <template #fallback>
               <p class="text-sm text-muted">
@@ -113,7 +117,7 @@ const hasData = computed(() => status.value === "success");
             class="text-sm"
           >
             <div class="font-bold mb-2">
-              Cohort Summary (PRs)
+              Cohort Summary (Merged PRs)
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
