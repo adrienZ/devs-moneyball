@@ -64,8 +64,8 @@ export default defineEventHandler(async (event) => {
   const criteria: RatingCriterion[] = [
     {
       code: "A1",
-      label: "Pull request frequency percentile",
-      description: "Measures how frequently the developer creates pull requests compared to their cohort. Higher values indicate more consistent contribution activity.",
+      label: "Merged pull request frequency percentile",
+      description: "Measures how frequently the developer creates merged pull requests compared to their cohort. Higher values indicate more consistent contribution activity.",
       value: pullRequestFrequency,
     },
   ];

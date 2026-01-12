@@ -63,14 +63,19 @@ export default defineEventHandler(async (event): Promise<CohortPullRequestsRespo
   const username = typeof query.username === "string" ? query.username : null;
   const snapshotRepository = SnapshotRepository.getInstance();
   const latestSnapshot = await snapshotRepository.findLatest();
-  const cohortSnapshotId = latestSnapshot?.id ?? null;
-  const lookbackWeeks = latestSnapshot
-    ? latestSnapshot.pullRequestFrequencyLookbackWeeks
-    : ratingsConfig.lookbackWeeks;
+  if (!latestSnapshot) {
+    throw createError({
+      statusCode: 404,
+      message: "Snapshot not found",
+    });
+  }
+
+  const cohortSnapshotId = latestSnapshot.id;
+  const lookbackWeeks = latestSnapshot.pullRequestFrequencyLookbackWeeks;
   const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
-  const cohort = cohortSnapshotId
-    ? await pullRequestStatsRepository.listCohortPullRequestPoints(cohortSnapshotId)
-    : [];
+  const cohort = await pullRequestStatsRepository.listCohortPullRequestPoints(
+    cohortSnapshotId,
+  );
   const cohortKeyNumbers = summarizeCohortCounts(
     cohort.map(point => point.pullRequestsCount),
   );
@@ -86,14 +91,9 @@ export default defineEventHandler(async (event): Promise<CohortPullRequestsRespo
       });
     }
 
-    const stats = await ensurePullRequestStats(
-      developerRow,
-      cohortSnapshotId
-        ? {
-            cohortSnapshotSourceId: cohortSnapshotId,
-          }
-        : {},
-    );
+    const stats = await ensurePullRequestStats(developerRow, {
+      cohortSnapshotSourceId: cohortSnapshotId,
+    });
     if (!stats) {
       throw createError({ statusCode: 404, message: "User not found" });
     }

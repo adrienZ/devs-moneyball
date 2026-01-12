@@ -20,7 +20,6 @@ const defaultDateColumns = {
   deletedAt: timestamp({ mode: "string" }),
 };
 
-const legacyLookbackWeeksValue = 52;
 export const snapshots = pgTable(
   "cohorts_snapshots",
   {
@@ -28,7 +27,7 @@ export const snapshots = pgTable(
       .$defaultFn(() => randomUUID())
       .primaryKey(),
     count: integer().notNull(),
-    pullRequestFrequencyLookbackWeeks: integer().default(legacyLookbackWeeksValue).notNull(),
+    pullRequestFrequencyLookbackWeeks: integer().notNull(),
     ...defaultDateColumns,
   },
 );

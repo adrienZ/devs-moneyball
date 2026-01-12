@@ -1,0 +1,1 @@
+ALTER TABLE "cohorts_snapshots" ALTER COLUMN "pullRequestFrequencyLookbackWeeks" DROP DEFAULT;
