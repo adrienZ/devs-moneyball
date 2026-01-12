@@ -3,7 +3,6 @@ import { DeveloperRepository } from "~~/server/repositories/developerRepository"
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
 import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
-import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 
 type CurrentPullRequests = {
   login: string;
