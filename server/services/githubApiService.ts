@@ -3,8 +3,8 @@ import { getGithubClient } from "~~/server/githubClient";
 import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
 import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
 import {
-  getMergedPullRequestsSinceDate,
-  getMergedPullRequestsSinceDateTime,
+  getMergedPullRequestsSinceDateFromWeeks,
+  getMergedPullRequestsSinceDateTimeFromWeeks,
 } from "~~/server/utils/date-helper";
 
 type PullRequestsQueryResult = DocumentType<typeof getPullRequestsStatsQuery>;
@@ -40,7 +40,7 @@ export class GithubApiService {
     username: string,
     lookbackWeeks: number,
   ): Promise<PullRequestsUser | null> {
-    const sinceDateTime = getMergedPullRequestsSinceDateTime(
+    const sinceDateTime = getMergedPullRequestsSinceDateTimeFromWeeks(
       lookbackWeeks,
     );
     const { user } = await getGithubClient().call(getPullRequestsStatsQuery, {
@@ -76,7 +76,7 @@ export class GithubApiService {
   }
 
   async fetchMergedPullRequestsCount(login: string, lookbackWeeks: number): Promise<number> {
-    const sinceDate = getMergedPullRequestsSinceDate(
+    const sinceDate = getMergedPullRequestsSinceDateFromWeeks(
       lookbackWeeks,
     );
     const query = `is:pr author:${login} is:merged merged:>=${sinceDate}`;
@@ -87,7 +87,7 @@ export class GithubApiService {
     login: string,
     lookbackWeeks: number,
   ): Promise<PullRequestCountsSince> {
-    const sinceDate = getMergedPullRequestsSinceDate(
+    const sinceDate = getMergedPullRequestsSinceDateFromWeeks(
       lookbackWeeks,
     );
     const baseQuery = `is:pr author:${login}`;

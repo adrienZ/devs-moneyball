@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMergedPullRequestsSinceDate } from "../server/utils/date-helper";
+import { getMergedPullRequestsSinceDateFromWeeks } from "../server/utils/date-helper";
 
-describe("getMergedPullRequestsSinceDate", () => {
-  const msInDay = 24 * 60 * 60 * 1000;
+describe("getMergedPullRequestsSinceDateFromWeeks", () => {
+  const oneWeek = 1;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -13,15 +13,15 @@ describe("getMergedPullRequestsSinceDate", () => {
     vi.useRealTimers();
   });
 
-  it("returns the expected date string for a day lookback", () => {
-    expect(getMergedPullRequestsSinceDate(msInDay)).toBe("2024-08-14");
+  it("returns the expected date string for a 1-week lookback", () => {
+    expect(getMergedPullRequestsSinceDateFromWeeks(oneWeek)).toBe("2024-08-08");
   });
 
-  it("returns the expected date string for a week lookback", () => {
-    expect(getMergedPullRequestsSinceDate(7 * msInDay)).toBe("2024-08-08");
+  it("returns the expected date string for a 4-week lookback", () => {
+    expect(getMergedPullRequestsSinceDateFromWeeks(4)).toBe("2024-07-18");
   });
 
-  it("returns the expected date string for a year lookback", () => {
-    expect(getMergedPullRequestsSinceDate(365 * msInDay)).toBe("2023-08-16");
+  it("returns the expected date string for a 52-week lookback", () => {
+    expect(getMergedPullRequestsSinceDateFromWeeks(52)).toBe("2023-08-17");
   });
 });
