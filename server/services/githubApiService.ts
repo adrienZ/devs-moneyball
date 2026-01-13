@@ -1,11 +1,10 @@
 import type { DocumentType } from "../../codegen";
-import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 import { getGithubClient } from "~~/server/githubClient";
 import { getPullRequestsStatsQuery } from "~~/server/graphql/getPullRequestsStats.gql";
 import { searchMergedPullRequestsQuery } from "~~/server/graphql/searchMergedPullRequests.gql";
 import {
-  getMergedPullRequestsSinceDate,
-  getMergedPullRequestsSinceDateTime,
+  getMergedPullRequestsSinceDateFromWeeks,
+  getMergedPullRequestsSinceDateTimeFromWeeks,
 } from "~~/server/utils/date-helper";
 
 type PullRequestsQueryResult = DocumentType<typeof getPullRequestsStatsQuery>;
@@ -16,7 +15,6 @@ type MergedPullRequestsSearch = MergedPullRequestsQueryResult["search"];
 type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["nodes"]>[number]>;
 
 export type PullRequestCountsSince = {
-  pullRequestsTotalCount: number;
   mergedPullRequestsTotalCount: number;
   closedPullRequestsTotalCount: number;
   openPullRequestsTotalCount: number;
@@ -38,9 +36,12 @@ export class GithubApiService {
     return GithubApiService.instance;
   }
 
-  async fetchPullRequestsUser(username: string): Promise<PullRequestsUser | null> {
-    const sinceDateTime = getMergedPullRequestsSinceDateTime(
-      ratingsConfig.githubApi.mergedPullRequestsLookbackMs,
+  async fetchPullRequestsUser(
+    username: string,
+    lookbackWeeks: number,
+  ): Promise<PullRequestsUser | null> {
+    const sinceDateTime = getMergedPullRequestsSinceDateTimeFromWeeks(
+      lookbackWeeks,
     );
     const { user } = await getGithubClient().call(getPullRequestsStatsQuery, {
       username,
@@ -74,33 +75,33 @@ export class GithubApiService {
     return total;
   }
 
-  async fetchMergedPullRequestsCount(login: string): Promise<number> {
-    const sinceDate = getMergedPullRequestsSinceDate(
-      ratingsConfig.githubApi.mergedPullRequestsLookbackMs,
+  async fetchMergedPullRequestsCount(login: string, lookbackWeeks: number): Promise<number> {
+    const sinceDate = getMergedPullRequestsSinceDateFromWeeks(
+      lookbackWeeks,
     );
     const query = `is:pr author:${login} is:merged merged:>=${sinceDate}`;
     return this.fetchPullRequestCountBySearch(query);
   }
 
-  async fetchPullRequestCountsSince(login: string): Promise<PullRequestCountsSince> {
-    const sinceDate = getMergedPullRequestsSinceDate(
-      ratingsConfig.githubApi.mergedPullRequestsLookbackMs,
+  async fetchPullRequestCountsSince(
+    login: string,
+    lookbackWeeks: number,
+  ): Promise<PullRequestCountsSince> {
+    const sinceDate = getMergedPullRequestsSinceDateFromWeeks(
+      lookbackWeeks,
     );
     const baseQuery = `is:pr author:${login}`;
     const [
-      pullRequestsTotalCount,
       mergedPullRequestsTotalCount,
       closedPullRequestsTotalCount,
       openPullRequestsTotalCount,
     ] = await Promise.all([
-      this.fetchPullRequestCountBySearch(`${baseQuery} created:>=${sinceDate}`),
       this.fetchPullRequestCountBySearch(`${baseQuery} is:merged merged:>=${sinceDate}`),
       this.fetchPullRequestCountBySearch(`${baseQuery} is:closed -is:merged closed:>=${sinceDate}`),
       this.fetchPullRequestCountBySearch(`${baseQuery} is:open created:>=${sinceDate}`),
     ]);
 
     return {
-      pullRequestsTotalCount,
       mergedPullRequestsTotalCount,
       closedPullRequestsTotalCount,
       openPullRequestsTotalCount,

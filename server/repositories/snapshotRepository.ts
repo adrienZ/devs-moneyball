@@ -29,10 +29,10 @@ export class SnapshotRepository {
     });
   }
 
-  async createSnapshot(count: number): Promise<string> {
+  async createSnapshot(count: number, lookbackWeeks: number): Promise<string> {
     const [snap] = await this.db
       .insert(snapshots)
-      .values({ count })
+      .values({ count, pullRequestFrequencyLookbackWeeks: lookbackWeeks })
       .returning();
 
     if (!snap) throw new Error("Failed to insert snapshot");
@@ -43,6 +43,7 @@ export class SnapshotRepository {
     count: number;
     names: string[];
     timestamp: string;
+    pullRequestFrequencyLookbackWeeks: number;
   }): Promise<string> {
     const names = this.dedupeNames(input.names);
     const existing = names.length === 0
@@ -58,6 +59,7 @@ export class SnapshotRepository {
         .insert(snapshots)
         .values({
           count: input.count,
+          pullRequestFrequencyLookbackWeeks: input.pullRequestFrequencyLookbackWeeks,
         })
         .returning();
 
