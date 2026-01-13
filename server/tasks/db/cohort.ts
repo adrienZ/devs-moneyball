@@ -6,6 +6,7 @@ import { z } from "zod";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
 import { enqueuePullRequestStats } from "~~/server/services/queueService";
+import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 
 interface CohortUser {
   id: string;
@@ -141,6 +142,7 @@ export default defineTask({
       count: resolvedLogins.length,
       names: resolvedLogins,
       timestamp: new Date().toISOString(),
+      pullRequestFrequencyLookbackWeeks: ratingsConfig.lookbackWeeks,
     });
     const developers = await developerRepository.listByUsernames(resolvedLogins);
 

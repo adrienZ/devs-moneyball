@@ -27,6 +27,7 @@ export const snapshots = pgTable(
       .$defaultFn(() => randomUUID())
       .primaryKey(),
     count: integer().notNull(),
+    pullRequestFrequencyLookbackWeeks: integer().notNull(),
     ...defaultDateColumns,
   },
 );
@@ -79,9 +80,6 @@ export const githubPullRequestStats = pgTable(
     cohortSnapshotSourceId: uuid().references(() => snapshots.id, { onDelete: "set null" }),
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
-    pullRequestsTotalCount: integer().notNull(),
-    pullRequestsWeeklyCount: integer().notNull(),
-    pullRequestsWeeklyCap: integer().notNull(),
     mergedPullRequestsTotalCount: integer().notNull(),
     closedPullRequestsTotalCount: integer().notNull(),
     openPullRequestsTotalCount: integer().notNull(),

@@ -31,7 +31,7 @@ describe("PullRequestStatsRepository", () => {
 
     if (!developer) throw new Error("Failed to create developer");
 
-    const snapshotId = await snapshotRepository.createSnapshot(0);
+    const snapshotId = await snapshotRepository.createSnapshot(0, 4);
 
     const saved = await statsRepository.upsert({
       id: randomUUID(),
@@ -39,9 +39,6 @@ describe("PullRequestStatsRepository", () => {
       cohortSnapshotSourceId: snapshotId,
       totalPullRequestContributions: 3,
       totalPullRequestReviewContributions: 2,
-      pullRequestsTotalCount: 5,
-      pullRequestsWeeklyCount: 5,
-      pullRequestsWeeklyCap: 30,
       mergedPullRequestsTotalCount: 1,
       closedPullRequestsTotalCount: 1,
       openPullRequestsTotalCount: 3,
@@ -51,9 +48,9 @@ describe("PullRequestStatsRepository", () => {
     expect(saved?.developerId).toBe(developer.id);
 
     const fetched = await statsRepository.findByDeveloperId(developer.id);
-    expect(fetched?.pullRequestsTotalCount).toBe(5);
+    expect(fetched?.mergedPullRequestsTotalCount).toBe(1);
 
-    const newSnapshotId = await snapshotRepository.createSnapshot(0);
+    const newSnapshotId = await snapshotRepository.createSnapshot(0, 4);
 
     const updated = await statsRepository.updateCohortSnapshotSource(
       developer.id,
@@ -63,6 +60,6 @@ describe("PullRequestStatsRepository", () => {
     expect(updated?.cohortSnapshotSourceId).toBe(newSnapshotId);
 
     const counts = await statsRepository.listCohortPullRequestCounts(newSnapshotId);
-    expect(counts).toEqual([5]);
+    expect(counts).toEqual([1]);
   });
 });

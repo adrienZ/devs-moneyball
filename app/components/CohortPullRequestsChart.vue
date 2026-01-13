@@ -5,12 +5,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 
 interface CohortPullRequestPoint {
   login: string;
-  weeklyPullRequestsCount: number;
+  pullRequestsCount: number;
 }
 
 interface PullRequestsStats {
   login: string;
-  pullRequests: { weeklyCount: number };
+  pullRequests: { totalCount: number };
 }
 
 type CohortScatterPoint = ScatterDataPoint & {
@@ -25,6 +25,7 @@ const props = defineProps<{
   cohort: CohortPullRequestPoint[];
   current: PullRequestsStats | null;
   githubId: string;
+  lookbackWeeks: number;
 }>();
 
 Chart.register(
@@ -39,7 +40,7 @@ const cohortPoints = computed<CohortScatterPoint[]>(() => {
   const currentLogin = props.current?.login.toLowerCase() ?? null;
   const entries = props.cohort.map(point => ({
     login: point.login,
-    weeklyPullRequestsCount: point.weeklyPullRequestsCount,
+    pullRequestsCount: point.pullRequestsCount,
   }));
 
   if (props.current && currentLogin) {
@@ -47,14 +48,14 @@ const cohortPoints = computed<CohortScatterPoint[]>(() => {
     if (!alreadyIncluded) {
       entries.push({
         login: props.current.login,
-        weeklyPullRequestsCount: props.current.pullRequests.weeklyCount,
+        pullRequestsCount: props.current.pullRequests.totalCount,
       });
     }
   }
 
   const grouped = new Map<number, { usernames: Set<string>; hasCurrent: boolean }>();
   for (const entry of entries) {
-    const key = entry.weeklyPullRequestsCount;
+    const key = entry.pullRequestsCount;
     const bucket = grouped.get(key) ?? { usernames: new Set<string>(), hasCurrent: false };
     bucket.usernames.add(entry.login);
     if (currentLogin && entry.login.toLowerCase() === currentLogin) {
@@ -89,8 +90,8 @@ const tooltipLabel = (context: TooltipItem<"scatter">): string[] => {
   }
 
   const point = raw as CohortScatterPoint;
-  const weeklyLabel = `Weekly PRs: ${point.originalX}`;
-  return [`Developers: ${point.count}`, weeklyLabel, `Rank: ${point.rank}`];
+  const lookbackLabel = `Merged PRs in window: ${point.originalX}`;
+  return [`Developers: ${point.count}`, lookbackLabel, `Rank: ${point.rank}`];
 };
 
 const tooltipVisible = ref(false);
@@ -216,7 +217,7 @@ const chartOptions: ChartOptions<"scatter"> = {
       grid: {
         color: "rgba(148, 163, 184, 0.35)",
       },
-      title: { display: true, text: "Weekly PRs" },
+      title: { display: true, text: "Merged PRs in lookback window" },
     },
     y: {
       type: "linear",
@@ -337,7 +338,7 @@ onBeforeUnmount(() => {
           <div class="font-semibold text-primary">
             {{ tooltipTitle }}
           </div>
-          <div>Weekly PRs: {{ tooltipPoint.originalX }}</div>
+          <div>Merged PRs in window: {{ tooltipPoint.originalX }}</div>
           <div>Rank: {{ tooltipPoint.rank }}</div>
           <div
             v-if="tooltipNameList && tooltipPoint.count > 1"
@@ -364,7 +365,13 @@ onBeforeUnmount(() => {
       v-if="hasCohortPoints"
       class="text-xs text-muted mt-2"
     >
-      Hover or click a dot to see grouped developers and weekly PRs. The current developer is highlighted.
+      Hover or click a dot to see grouped developers and merged PRs in the lookback window. The current developer is highlighted.
+    </p>
+    <p
+      v-if="hasCohortPoints && props.lookbackWeeks > 0"
+      class="text-xs text-muted mt-1"
+    >
+      Lookback window: last {{ props.lookbackWeeks }} week{{ props.lookbackWeeks === 1 ? "" : "s" }}.
     </p>
   </div>
 </template>
