@@ -143,6 +143,7 @@ export default defineTask({
       names: resolvedLogins,
       timestamp: new Date().toISOString(),
       pullRequestFrequencyLookbackWeeks: ratingsConfig.lookbackWeeks,
+      status: "pending",
     });
     const developers = await developerRepository.listByUsernames(resolvedLogins);
 

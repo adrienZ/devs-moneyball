@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgEnum,
   uuid,
   timestamp,
   integer,
@@ -20,6 +21,12 @@ const defaultDateColumns = {
   deletedAt: timestamp({ mode: "string" }),
 };
 
+export const snapshotStatusEnum = pgEnum("cohort_snapshot_status", [
+  "pending",
+  "ready",
+  "failed",
+]);
+
 export const snapshots = pgTable(
   "cohorts_snapshots",
   {
@@ -28,6 +35,9 @@ export const snapshots = pgTable(
       .primaryKey(),
     count: integer().notNull(),
     pullRequestFrequencyLookbackWeeks: integer().notNull(),
+    status: snapshotStatusEnum("status")
+      .notNull()
+      .default("pending"),
     ...defaultDateColumns,
   },
 );

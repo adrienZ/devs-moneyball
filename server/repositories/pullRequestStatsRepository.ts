@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { useDrizzle } from "~~/database/client";
 import { developper, githubPullRequestStats } from "~~/database/schema";
 
@@ -82,5 +82,13 @@ export class PullRequestStatsRepository {
       .from(githubPullRequestStats)
       .innerJoin(developper, eq(githubPullRequestStats.developerId, developper.id))
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId));
+  }
+
+  async countBySnapshotId(snapshotId: string): Promise<number> {
+    const rows = await this.db
+      .select({ total: sql<number>`count(*)` })
+      .from(githubPullRequestStats)
+      .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId));
+    return rows.at(0)?.total ?? 0;
   }
 }

@@ -61,11 +61,11 @@ export default defineEventHandler(async (event): Promise<CohortPullRequestsRespo
   const query = getQuery(event);
   const username = typeof query.username === "string" ? query.username : null;
   const snapshotRepository = SnapshotRepository.getInstance();
-  const latestSnapshot = await snapshotRepository.findLatest();
+  const latestSnapshot = await snapshotRepository.findLatestReady();
   if (!latestSnapshot) {
     throw createError({
-      statusCode: 404,
-      message: "Snapshot not found",
+      statusCode: 409,
+      message: "Snapshot is not ready",
     });
   }
 

@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const latestSnapshot = await snapshotRepository.findLatest();
+  const latestSnapshot = await snapshotRepository.findLatestReady();
   const stats = await ensurePullRequestStats(developerRow);
 
   if (!stats) {
