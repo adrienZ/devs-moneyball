@@ -1,0 +1,2 @@
+CREATE TYPE "public"."cohort_snapshot_status" AS ENUM('pending', 'ready', 'failed');--> statement-breakpoint
+ALTER TABLE "cohorts_snapshots" ADD COLUMN "status" "cohort_snapshot_status" DEFAULT 'ready' NOT NULL;
