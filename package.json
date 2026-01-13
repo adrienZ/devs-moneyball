@@ -58,6 +58,7 @@
     "@types/node": "^24.8.1",
     "drizzle-kit": "^0.31.8",
     "ofetch": "^1.5.1",
+    "pg-boss-admin-dashboard": "^1.1.1",
     "unplugin-vue-router": "^0.19.2",
     "vitest": "^4.0.16",
     "vue-tsc": "^3.2.1"

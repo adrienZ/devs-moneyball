@@ -5,6 +5,7 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@nuxt/image",
     "./app/modules/drizzle-studio",
+    "./app/modules/pg-boss-dashboard",
   ],
   components: {
     // disable auto-import
