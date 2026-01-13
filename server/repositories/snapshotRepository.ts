@@ -4,6 +4,7 @@ import { snapshotNames, snapshots } from "~~/database/schema";
 
 type DrizzleClient = ReturnType<typeof useDrizzle>;
 type SnapshotRecord = typeof snapshots.$inferSelect;
+export type SnapshotStatus = SnapshotRecord["status"];
 
 export class SnapshotRepository {
   private static instance: SnapshotRepository | null = null;
@@ -32,7 +33,11 @@ export class SnapshotRepository {
   async createSnapshot(count: number, lookbackWeeks: number): Promise<string> {
     const [snap] = await this.db
       .insert(snapshots)
-      .values({ count, pullRequestFrequencyLookbackWeeks: lookbackWeeks })
+      .values({
+        count,
+        pullRequestFrequencyLookbackWeeks: lookbackWeeks,
+        status: "pending",
+      })
       .returning();
 
     if (!snap) throw new Error("Failed to insert snapshot");
@@ -44,6 +49,7 @@ export class SnapshotRepository {
     names: string[];
     timestamp: string;
     pullRequestFrequencyLookbackWeeks: number;
+    status?: SnapshotStatus;
   }): Promise<string> {
     const names = this.dedupeNames(input.names);
     const existing = names.length === 0
@@ -60,6 +66,7 @@ export class SnapshotRepository {
         .values({
           count: input.count,
           pullRequestFrequencyLookbackWeeks: input.pullRequestFrequencyLookbackWeeks,
+          status: input.status ?? "pending",
         })
         .returning();
 
@@ -91,6 +98,35 @@ export class SnapshotRepository {
       .orderBy(desc(snapshots.createdAt))
       .limit(1)
       .then(rows => rows.at(0) ?? null);
+  }
+
+  async findLatestReady(): Promise<SnapshotRecord | null> {
+    return this.db
+      .select()
+      .from(snapshots)
+      .where(eq(snapshots.status, "ready"))
+      .orderBy(desc(snapshots.createdAt))
+      .limit(1)
+      .then(rows => rows.at(0) ?? null);
+  }
+
+  async findById(snapshotId: string): Promise<SnapshotRecord | null> {
+    return this.db
+      .select()
+      .from(snapshots)
+      .where(eq(snapshots.id, snapshotId))
+      .limit(1)
+      .then(rows => rows.at(0) ?? null);
+  }
+
+  async updateStatus(snapshotId: string, status: SnapshotStatus): Promise<SnapshotRecord | null> {
+    const nowIso = new Date().toISOString();
+    const [updated] = await this.db
+      .update(snapshots)
+      .set({ status, updatedAt: nowIso })
+      .where(eq(snapshots.id, snapshotId))
+      .returning();
+    return updated ?? null;
   }
 
   async listNamesBySnapshotId(snapshotId: string): Promise<string[]> {
