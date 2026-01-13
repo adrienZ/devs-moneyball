@@ -21,8 +21,8 @@ export default defineNitroPlugin(async () => {
   const boss = getQueueService();
 
   // Register worker for pull request stats jobs
-  await boss.work(QUEUE_PULL_REQUEST_STATS, async ([job]) => {
-    const { developerId, cohortSnapshotSourceId } = job.data as PullRequestStatsJobData;
+  await boss.work<PullRequestStatsJobData>(QUEUE_PULL_REQUEST_STATS, async ([job]) => {
+    const { developerId, cohortSnapshotSourceId } = job.data;
 
     const developerRepository = DeveloperRepository.getInstance();
     const developer = await developerRepository.findById(developerId);

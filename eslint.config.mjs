@@ -7,7 +7,9 @@ export default withNuxt([
       "vue/v-on-event-hyphenation": ["error", "never"],
       "vue/attribute-hyphenation": ["error", "never"],
       "no-console": "error",
-    },
+      "@typescript-eslint/consistent-type-assertions": ["warn", {
+        assertionStyle: "never",
+      }] },
   },
   {
     ignores: ["codegen/*"],
