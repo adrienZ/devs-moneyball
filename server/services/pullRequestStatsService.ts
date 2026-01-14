@@ -4,6 +4,7 @@ import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 import {
   GithubApiService,
   type PullRequestCountsSince,
+  type PullRequestOwnershipCounts,
   type PullRequestsUser,
 } from "~~/server/services/githubApiService";
 
@@ -20,9 +21,12 @@ export type PullRequestStatsResponse = {
     totalPullRequestReviewContributions: number;
   };
   pullRequests: { totalCount: number };
-  mergedPullRequests: { totalCount: number };
+  mergedPullRequests: {
+    totalCount: number;
+    ownCount: number;
+    externalCount: number;
+  };
   closedPullRequests: { totalCount: number };
-  openPullRequests: { totalCount: number };
 };
 
 type PullRequestContributions = {
@@ -31,13 +35,12 @@ type PullRequestContributions = {
 };
 
 type PullRequestCounts = {
-  mergedPullRequestsTotalCount: number;
   closedPullRequestsTotalCount: number;
-  openPullRequestsTotalCount: number;
 };
 
 type PullRequestStatsOptions = {
   cohortSnapshotSourceId?: string;
+  lookbackWeeks?: number;
 };
 // #endregion Types
 
@@ -53,9 +56,7 @@ function buildCountsFromTotals(
   totals: PullRequestCountsSince,
 ): PullRequestCounts {
   return {
-    mergedPullRequestsTotalCount: totals.mergedPullRequestsTotalCount,
     closedPullRequestsTotalCount: totals.closedPullRequestsTotalCount,
-    openPullRequestsTotalCount: totals.openPullRequestsTotalCount,
   };
 }
 
@@ -63,6 +64,7 @@ function mapRecordToResponse(
   record: PullRequestStatsRecord,
   developerRecord: DeveloperRecord,
 ): PullRequestStatsResponse {
+  const mergedTotalCount = record.mergedPullRequestsOwnCount + record.mergedPullRequestsExternalCount;
   return {
     login: developerRecord.username,
     name: null,
@@ -71,11 +73,14 @@ function mapRecordToResponse(
       totalPullRequestReviewContributions: record.totalPullRequestReviewContributions,
     },
     pullRequests: {
-      totalCount: record.mergedPullRequestsTotalCount,
+      totalCount: mergedTotalCount,
     },
-    mergedPullRequests: { totalCount: record.mergedPullRequestsTotalCount },
+    mergedPullRequests: {
+      totalCount: mergedTotalCount,
+      ownCount: record.mergedPullRequestsOwnCount,
+      externalCount: record.mergedPullRequestsExternalCount,
+    },
     closedPullRequests: { totalCount: record.closedPullRequestsTotalCount },
-    openPullRequests: { totalCount: record.openPullRequestsTotalCount },
   };
 }
 
@@ -83,6 +88,7 @@ function mapApiUserToDb(
   user: PullRequestsUser,
   developerId: string,
   totals: PullRequestCountsSince,
+  ownership: PullRequestOwnershipCounts,
 ): PullRequestStatsInsert {
   const contributions = buildContributionsFromUser(user);
   const counts = buildCountsFromTotals(totals);
@@ -90,9 +96,9 @@ function mapApiUserToDb(
     developerId,
     totalPullRequestContributions: contributions.totalPullRequestContributions,
     totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
-    mergedPullRequestsTotalCount: counts.mergedPullRequestsTotalCount,
+    mergedPullRequestsOwnCount: ownership.ownCount,
+    mergedPullRequestsExternalCount: ownership.externalCount,
     closedPullRequestsTotalCount: counts.closedPullRequestsTotalCount,
-    openPullRequestsTotalCount: counts.openPullRequestsTotalCount,
   };
 }
 
@@ -100,9 +106,11 @@ function mapApiUserToResponse(
   user: PullRequestsUser,
   login: string,
   totals: PullRequestCountsSince,
+  ownership: PullRequestOwnershipCounts,
 ): PullRequestStatsResponse {
   const contributions = buildContributionsFromUser(user);
   const counts = buildCountsFromTotals(totals);
+  const mergedTotalCount = ownership.ownCount + ownership.externalCount;
   return {
     login,
     name: user.name ?? null,
@@ -111,11 +119,14 @@ function mapApiUserToResponse(
       totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
     },
     pullRequests: {
-      totalCount: counts.mergedPullRequestsTotalCount,
+      totalCount: mergedTotalCount,
     },
-    mergedPullRequests: { totalCount: counts.mergedPullRequestsTotalCount },
+    mergedPullRequests: {
+      totalCount: mergedTotalCount,
+      ownCount: ownership.ownCount,
+      externalCount: ownership.externalCount,
+    },
     closedPullRequests: { totalCount: counts.closedPullRequestsTotalCount },
-    openPullRequests: { totalCount: counts.openPullRequestsTotalCount },
   };
 }
 // #endregion Mappings
@@ -127,7 +138,7 @@ export async function ensurePullRequestStats(
 ): Promise<PullRequestStatsResponse | null> {
   const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
   const githubApiService = GithubApiService.getInstance();
-  const lookbackWeeks = ratingsConfig.lookbackWeeks;
+  const lookbackWeeks = options.lookbackWeeks ?? ratingsConfig.lookbackWeeks;
   // 1) Fetch current totals from GitHub.
   const user = await githubApiService.fetchPullRequestsUser(developer.username, lookbackWeeks);
   if (!user) {
@@ -136,8 +147,12 @@ export async function ensurePullRequestStats(
 
   // 2) Persist totals, return saved record when possible.
   const counts = await githubApiService.fetchPullRequestCountsSince(user.login, lookbackWeeks);
+  const ownership = await githubApiService.fetchMergedPullRequestsOwnershipCounts(
+    developer.username,
+    lookbackWeeks,
+  );
   const values: PullRequestStatsInsert = {
-    ...mapApiUserToDb(user, developer.id, counts),
+    ...mapApiUserToDb(user, developer.id, counts, ownership),
     cohortSnapshotSourceId: options.cohortSnapshotSourceId ?? null,
   };
   const savedRecord = await pullRequestStatsRepository.upsert(values);
@@ -146,6 +161,20 @@ export async function ensurePullRequestStats(
     return mapRecordToResponse(savedRecord, developer);
   }
 
-  return mapApiUserToResponse(user, developer.username, counts);
+  return mapApiUserToResponse(user, developer.username, counts, ownership);
 }
+
+export async function findPullRequestStats(
+  developer: DeveloperRecord,
+): Promise<PullRequestStatsResponse | null> {
+  const pullRequestStatsRepository = PullRequestStatsRepository.getInstance();
+  const record = await pullRequestStatsRepository.findByDeveloperId(developer.id);
+
+  if (!record) {
+    return null;
+  }
+
+  return mapRecordToResponse(record, developer);
+}
+
 // #endregion Service

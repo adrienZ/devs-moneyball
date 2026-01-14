@@ -17,7 +17,11 @@ type MergedPullRequestsNode = NonNullable<NonNullable<MergedPullRequestsSearch["
 export type PullRequestCountsSince = {
   mergedPullRequestsTotalCount: number;
   closedPullRequestsTotalCount: number;
-  openPullRequestsTotalCount: number;
+};
+
+export type PullRequestOwnershipCounts = {
+  ownCount: number;
+  externalCount: number;
 };
 
 function isPullRequestNode(node: MergedPullRequestsNode | null): node is MergedPullRequestsNode & { __typename: "PullRequest" } {
@@ -94,17 +98,34 @@ export class GithubApiService {
     const [
       mergedPullRequestsTotalCount,
       closedPullRequestsTotalCount,
-      openPullRequestsTotalCount,
     ] = await Promise.all([
       this.fetchPullRequestCountBySearch(`${baseQuery} is:merged merged:>=${sinceDate}`),
       this.fetchPullRequestCountBySearch(`${baseQuery} is:closed -is:merged closed:>=${sinceDate}`),
-      this.fetchPullRequestCountBySearch(`${baseQuery} is:open created:>=${sinceDate}`),
     ]);
 
     return {
       mergedPullRequestsTotalCount,
       closedPullRequestsTotalCount,
-      openPullRequestsTotalCount,
     };
   }
+
+  async fetchMergedPullRequestsOwnershipCounts(
+    login: string,
+    lookbackWeeks: number,
+  ): Promise<PullRequestOwnershipCounts> {
+    const sinceDate = getMergedPullRequestsSinceDateFromWeeks(
+      lookbackWeeks,
+    );
+    const baseQuery = `is:pr author:${login} is:merged merged:>=${sinceDate}`;
+    const [ownCount, externalCount] = await Promise.all([
+      this.fetchPullRequestCountBySearch(`${baseQuery} user:${login}`),
+      this.fetchPullRequestCountBySearch(`${baseQuery} -user:${login}`),
+    ]);
+
+    return {
+      ownCount,
+      externalCount,
+    };
+  }
+
 }

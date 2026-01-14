@@ -66,18 +66,26 @@ export class PullRequestStatsRepository {
   }
 
   async listCohortPullRequestCounts(snapshotId: string): Promise<number[]> {
+    const totalCount = sql<number>`
+      ${githubPullRequestStats.mergedPullRequestsOwnCount}
+      + ${githubPullRequestStats.mergedPullRequestsExternalCount}
+    `;
     return this.db
-      .select({ total: githubPullRequestStats.mergedPullRequestsTotalCount })
+      .select({ total: totalCount })
       .from(githubPullRequestStats)
       .where(eq(githubPullRequestStats.cohortSnapshotSourceId, snapshotId))
       .then(rows => rows.map(row => row.total));
   }
 
   async listCohortPullRequestPoints(snapshotId: string): Promise<CohortPullRequestPoint[]> {
+    const totalCount = sql<number>`
+      ${githubPullRequestStats.mergedPullRequestsOwnCount}
+      + ${githubPullRequestStats.mergedPullRequestsExternalCount}
+    `;
     return this.db
       .select({
         login: developper.username,
-        pullRequestsCount: githubPullRequestStats.mergedPullRequestsTotalCount,
+        pullRequestsCount: totalCount,
       })
       .from(githubPullRequestStats)
       .innerJoin(developper, eq(githubPullRequestStats.developerId, developper.id))

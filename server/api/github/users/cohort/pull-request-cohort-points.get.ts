@@ -6,7 +6,11 @@ import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsServi
 
 type CurrentPullRequests = {
   login: string;
-  pullRequests: { totalCount: number };
+  pullRequests: {
+    totalCount: number;
+    ownCount: number;
+    externalCount: number;
+  };
 };
 
 type CohortKeyNumbers = {
@@ -92,6 +96,7 @@ export default defineEventHandler(async (event): Promise<CohortPullRequestsRespo
 
     const stats = await ensurePullRequestStats(developerRow, {
       cohortSnapshotSourceId: cohortSnapshotId,
+      lookbackWeeks,
     });
     if (!stats) {
       throw createError({ statusCode: 404, message: "User not found" });
@@ -99,9 +104,7 @@ export default defineEventHandler(async (event): Promise<CohortPullRequestsRespo
 
     current = {
       login: stats.login,
-      pullRequests: {
-        totalCount: stats.mergedPullRequests.totalCount,
-      },
+      pullRequests: stats.mergedPullRequests,
     };
   }
 

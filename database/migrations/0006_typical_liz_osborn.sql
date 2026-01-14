@@ -1,0 +1,2 @@
+ALTER TABLE "github_pull_request_stats" RENAME COLUMN "mergedPullRequestsTotalCount" TO "mergedPullRequestsOwnCount";--> statement-breakpoint
+ALTER TABLE "github_pull_request_stats" ADD COLUMN "mergedPullRequestsExternalCount" integer NOT NULL;

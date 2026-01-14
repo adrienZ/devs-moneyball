@@ -1,0 +1,385 @@
+{
+  "id": "6d61c002-e1f6-46db-8fd9-39225b73389c",
+  "prevId": "41a4a09f-a6e6-48eb-a2cd-ab15ce67f2d9",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.developper": {
+      "name": "developper",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "githubId": {
+          "name": "githubId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatarUrl": {
+          "name": "avatarUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "developper_githubId_unique": {
+          "name": "developper_githubId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "githubId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.github_pull_request_stats": {
+      "name": "github_pull_request_stats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "developerId": {
+          "name": "developerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cohortSnapshotSourceId": {
+          "name": "cohortSnapshotSourceId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalPullRequestContributions": {
+          "name": "totalPullRequestContributions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalPullRequestReviewContributions": {
+          "name": "totalPullRequestReviewContributions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mergedPullRequestsOwnCount": {
+          "name": "mergedPullRequestsOwnCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mergedPullRequestsExternalCount": {
+          "name": "mergedPullRequestsExternalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "closedPullRequestsTotalCount": {
+          "name": "closedPullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "openPullRequestsTotalCount": {
+          "name": "openPullRequestsTotalCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "github_pull_request_stats_developer_id_uk": {
+          "name": "github_pull_request_stats_developer_id_uk",
+          "columns": [
+            {
+              "expression": "developerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_pull_request_stats_cohort_snapshot_idx": {
+          "name": "github_pull_request_stats_cohort_snapshot_idx",
+          "columns": [
+            {
+              "expression": "cohortSnapshotSourceId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "github_pull_request_stats_developerId_developper_id_fk": {
+          "name": "github_pull_request_stats_developerId_developper_id_fk",
+          "tableFrom": "github_pull_request_stats",
+          "tableTo": "developper",
+          "columnsFrom": [
+            "developerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "github_pull_request_stats_cohortSnapshotSourceId_cohorts_snapshots_id_fk": {
+          "name": "github_pull_request_stats_cohortSnapshotSourceId_cohorts_snapshots_id_fk",
+          "tableFrom": "github_pull_request_stats",
+          "tableTo": "cohorts_snapshots",
+          "columnsFrom": [
+            "cohortSnapshotSourceId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cohorts_snapshot_names": {
+      "name": "cohorts_snapshot_names",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "snapshotId": {
+          "name": "snapshotId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "cohorts_snapshot_names_snapshot_idx": {
+          "name": "cohorts_snapshot_names_snapshot_idx",
+          "columns": [
+            {
+              "expression": "snapshotId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cohorts_snapshot_names_snapshotId_cohorts_snapshots_id_fk": {
+          "name": "cohorts_snapshot_names_snapshotId_cohorts_snapshots_id_fk",
+          "tableFrom": "cohorts_snapshot_names",
+          "tableTo": "cohorts_snapshots",
+          "columnsFrom": [
+            "snapshotId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "cohorts_snapshot_names_name_unique": {
+          "name": "cohorts_snapshot_names_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cohorts_snapshots": {
+      "name": "cohorts_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pullRequestFrequencyLookbackWeeks": {
+          "name": "pullRequestFrequencyLookbackWeeks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "cohort_snapshot_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.cohort_snapshot_status": {
+      "name": "cohort_snapshot_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "ready",
+        "failed"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

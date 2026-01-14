@@ -10,7 +10,11 @@ interface CohortPullRequestPoint {
 
 interface PullRequestsStats {
   login: string;
-  pullRequests: { totalCount: number };
+  pullRequests: {
+    totalCount: number;
+    ownCount: number;
+    externalCount: number;
+  };
 }
 
 type CohortScatterPoint = ScatterDataPoint & {

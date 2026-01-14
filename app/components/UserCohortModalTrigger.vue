@@ -11,7 +11,11 @@ interface CohortPullRequestPoint {
 
 interface PullRequestsStats {
   login: string;
-  pullRequests: { totalCount: number };
+  pullRequests: {
+    totalCount: number;
+    ownCount: number;
+    externalCount: number;
+  };
 }
 
 interface CohortPullRequestsResponse {
@@ -120,6 +124,20 @@ const hasData = computed(() => status.value === "success");
               Cohort Summary (Merged PRs)
             </div>
             <div class="grid grid-cols-2 gap-3">
+              <div v-if="currentPullRequests">
+                <div class="text-muted">
+                  Your merged PRs (own / external)
+                </div>
+                <div class="font-semibold">
+                  {{ currentPullRequests.pullRequests.ownCount }}
+                  /
+                  {{ currentPullRequests.pullRequests.externalCount }}
+                  ({{ currentPullRequests.pullRequests.totalCount }} total)
+                </div>
+                <div class="text-xs text-muted">
+                  Lookback: last {{ lookbackWeeks }} weeks
+                </div>
+              </div>
               <div>
                 <div class="text-muted">
                   Size

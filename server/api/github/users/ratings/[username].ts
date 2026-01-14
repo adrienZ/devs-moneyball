@@ -4,13 +4,14 @@ import { mapPullRequestFrequencyRawTotals } from "~~/server/core/ratings/pullReq
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { PullRequestStatsRepository } from "~~/server/repositories/pullRequestStatsRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
-import { ensurePullRequestStats } from "~~/server/services/pullRequestStatsService";
+import { ensurePullRequestStats, findPullRequestStats } from "~~/server/services/pullRequestStatsService";
 
 type RatingCriterion = {
   code: string;
   label: string;
   description: string;
   value: number | null;
+  windowWeeks: number;
 };
 
 function percentileToTwentyScale(percentile: number): number {
@@ -40,17 +41,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const latestSnapshot = await snapshotRepository.findLatestReady();
-  const stats = await ensurePullRequestStats(developerRow);
+  if (!latestSnapshot) {
+    throw createError({
+      statusCode: 409,
+      message: "Snapshot is not ready",
+    });
+  }
+  const existingStats = await findPullRequestStats(developerRow);
+  
+  const stats = existingStats ?? await ensurePullRequestStats(developerRow, {
+    lookbackWeeks: latestSnapshot.pullRequestFrequencyLookbackWeeks,
+  });
 
   if (!stats) {
     throw createError({ statusCode: 404, message: "User not found" });
   }
 
-  let cohortCounts: number[] = [];
-  if (latestSnapshot) {
-    cohortCounts = await pullRequestStatsRepository
-      .listCohortPullRequestCounts(latestSnapshot.id);
-  }
+  const cohortCounts = await pullRequestStatsRepository
+    .listCohortPullRequestCounts(latestSnapshot.id);
+  const lookbackWeeks = latestSnapshot.pullRequestFrequencyLookbackWeeks;
 
   const pullRequestFrequency = cohortCounts.length > 0
     ? percentileToTwentyScale(ratePullRequestFrequencyFromTotals(
@@ -67,6 +76,7 @@ export default defineEventHandler(async (event) => {
       label: "Merged pull request frequency percentile",
       description: "Measures how frequently the developer creates merged pull requests compared to their cohort. Higher values indicate more consistent contribution activity.",
       value: pullRequestFrequency,
+      windowWeeks: lookbackWeeks,
     },
   ];
 

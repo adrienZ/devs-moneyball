@@ -26,6 +26,7 @@ interface RatingsResponse {
     label: string;
     description: string;
     value: number | null;
+    windowWeeks: number;
   }>;
 }
 
@@ -179,7 +180,9 @@ const tabsItems = shallowRef<TabsItem[]>([
                     </td>
                     <td class="py-2 pr-4">
                       <UTooltip :text="criterion.description">
-                        <div> {{ criterion.label }}</div>
+                        <div>
+                          {{ criterion.label }}
+                        </div>
                       </UTooltip>
                     </td>
                     <td class="py-2 pr-4 font-semibold">

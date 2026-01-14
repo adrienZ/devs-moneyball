@@ -90,9 +90,9 @@ export const githubPullRequestStats = pgTable(
     cohortSnapshotSourceId: uuid().references(() => snapshots.id, { onDelete: "set null" }),
     totalPullRequestContributions: integer().notNull(),
     totalPullRequestReviewContributions: integer().notNull(),
-    mergedPullRequestsTotalCount: integer().notNull(),
+    mergedPullRequestsOwnCount: integer().notNull(),
+    mergedPullRequestsExternalCount: integer().notNull(),
     closedPullRequestsTotalCount: integer().notNull(),
-    openPullRequestsTotalCount: integer().notNull(),
     ...defaultDateColumns,
   },
   table => ({

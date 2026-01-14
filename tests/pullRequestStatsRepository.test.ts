@@ -39,16 +39,17 @@ describe("PullRequestStatsRepository", () => {
       cohortSnapshotSourceId: snapshotId,
       totalPullRequestContributions: 3,
       totalPullRequestReviewContributions: 2,
-      mergedPullRequestsTotalCount: 1,
+      mergedPullRequestsOwnCount: 1,
+      mergedPullRequestsExternalCount: 2,
       closedPullRequestsTotalCount: 1,
-      openPullRequestsTotalCount: 3,
       updatedAt: new Date().toISOString(),
     });
 
     expect(saved?.developerId).toBe(developer.id);
 
     const fetched = await statsRepository.findByDeveloperId(developer.id);
-    expect(fetched?.mergedPullRequestsTotalCount).toBe(1);
+    expect(fetched?.mergedPullRequestsOwnCount).toBe(1);
+    expect(fetched?.mergedPullRequestsExternalCount).toBe(2);
 
     const newSnapshotId = await snapshotRepository.createSnapshot(0, 4);
 
@@ -60,6 +61,6 @@ describe("PullRequestStatsRepository", () => {
     expect(updated?.cohortSnapshotSourceId).toBe(newSnapshotId);
 
     const counts = await statsRepository.listCohortPullRequestCounts(newSnapshotId);
-    expect(counts).toEqual([1]);
+    expect(counts).toEqual([3]);
   });
 });
