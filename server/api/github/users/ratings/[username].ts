@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     });
   }
   const existingStats = await findPullRequestStats(developerRow);
-  
+
   const stats = existingStats ?? await ensurePullRequestStats(developerRow, {
     lookbackWeeks: latestSnapshot.pullRequestFrequencyLookbackWeeks,
   });
