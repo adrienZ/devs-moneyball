@@ -127,5 +127,4 @@ export class GithubApiService {
       externalCount,
     };
   }
-
 }
