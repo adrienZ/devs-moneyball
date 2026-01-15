@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { DeveloperRepository } from "~~/server/repositories/developerRepository";
 import { SnapshotRepository } from "~~/server/repositories/snapshotRepository";
-import { enqueuePullRequestStats } from "~~/server/services/queueService";
+import { QueueService } from "~~/server/services/queueService";
 import { ratingsConfig } from "~~/server/core/ratings/ratings.config";
 
 interface CohortUser {
@@ -152,7 +152,11 @@ export default defineTask({
       developerId: developer.id,
       cohortSnapshotSourceId: snapshotId,
     }));
-    await enqueuePullRequestStats(jobs);
+
+    const dataFetchJob = QueueService.getInstance().getPullRequestStatsJob();
+    for (const job of jobs) {
+      await dataFetchJob.emit(job);
+    }
 
     return {
       result: {
